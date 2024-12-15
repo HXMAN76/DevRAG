@@ -1,4 +1,3 @@
-from bs4 import BeautifulSoup
 import requests
 from dotenv import load_dotenv
 import os
@@ -19,8 +18,7 @@ def scrape(url):
 
     html = response.text
 
-    with open("webscrape.html", "w", encoding="utf-8") as f:
-        f.write(html)
+    return html
         
 def generate_json(html):
     load_dotenv()
@@ -40,19 +38,14 @@ def generate_json(html):
 
 def main():
     base_url = "https://docs.mistral.ai" 
-    scrape(base_url)
-    
-    with open("webscrape.html", "r") as html_file:
-        html_content = html_file.read()
-    
+    html_content = scrape(base_url)
     json_response = generate_json(html_content)
-    
+    links = json_response['links']
+    json_data.pop('links', None)
     with open('data.json', 'w') as json_file:
         json.dump(json.loads(json_response), json_file)
     
-    with open('data.json', 'r') as json_file:
-        data = json.load(json_file)
-        for link_info in data.get('links', []):
+    for link_info in links:
             full_link = link_info['url'] if link_info['type'] == "external" else base_url + link_info['url']
             print(full_link)
             
