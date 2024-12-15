@@ -39,20 +39,32 @@ def generate_json(html):
     
 
 def main():
-    url = "https://docs.mistral.ai/"
-    scrape(url)
-    html = open("webscrape.html", "r").read()
-    json_data = generate_json(html)
-    with open('data.json', 'w') as f:
-        json.dump(json.loads(json_data), f)
-    # with open('sample.json', 'r') as f:
-    #     data = json.load(f) 
-    #     for i in data['links']:
-    #         if i['type'] == "external":
-    #             print(i['url'])
-    #             scrape(i['url'])
-    #             html = open("webscrape.html", "r").read()
-    #             json_data = generate_json(html)
-                
+    base_url = "https://docs.mistral.ai" 
+    scrape(base_url)
     
+    with open("webscrape.html", "r") as html_file:
+        html_content = html_file.read()
+    
+    json_response = generate_json(html_content)
+    
+    with open('data.json', 'w') as json_file:
+        json.dump(json.loads(json_response), json_file)
+    
+    with open('data.json', 'r') as json_file:
+        data = json.load(json_file)
+        for link_info in data.get('links', []):
+            full_link = link_info['url'] if link_info['type'] == "external" else base_url + link_info['url']
+            print(full_link)
+            
+            scrape(full_link)
+            
+            with open("webscrape.html", "r", encoding="utf-8") as html_file:
+                html_content = html_file.read()
+            
+            json_response = generate_json(html_content)
+            json_data = json.loads(json_response)
+            json_data['links'] = []
+            
+            with open('data.json', 'a') as json_file:
+                json.dump(json_data, json_file)
 main()
