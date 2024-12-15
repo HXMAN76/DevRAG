@@ -19,7 +19,7 @@ def scrape(url):
 
     html = response.text
 
-    with open("webscrape.html", "w") as f:
+    with open("webscrape.html", "w",encoding='utf-8') as f:
         f.write(html)
         
 def generate_json(html):
