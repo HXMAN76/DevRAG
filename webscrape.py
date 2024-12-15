@@ -19,7 +19,7 @@ def scrape(url):
 
     html = response.text
 
-    with open("webscrape.html", "w",encoding='utf-8') as f:
+    with open("webscrape.html", "w", encoding="utf-8") as f:
         f.write(html)
         
 def generate_json(html):
@@ -35,7 +35,7 @@ def generate_json(html):
             },
         ],
     )
-    chat_response.choices[0].message.content
+    return chat_response.choices[0].message.content
     
 
 def main():
@@ -43,7 +43,8 @@ def main():
     scrape(url)
     html = open("webscrape.html", "r").read()
     json_data = generate_json(html)
-    print(json_data)
+    with open('data.json', 'w') as f:
+        json.dump(json.loads(json_data), f)
     # with open('sample.json', 'r') as f:
     #     data = json.load(f) 
     #     for i in data['links']:
