@@ -1,5 +1,5 @@
-webscrape.html
-data.json
+./webscrape.html
+./data.json
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
