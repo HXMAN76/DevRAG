@@ -1,3 +1,4 @@
 mistralai
 requests
 python-dotenv
+streamlit
