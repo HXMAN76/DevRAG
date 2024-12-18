@@ -1,63 +1,52 @@
-import requests
-from dotenv import load_dotenv
-import os
-from mistralai import Mistral  # type: ignore
+import asyncio
+from crawl4ai import AsyncWebCrawler
 import json
 
-def scrape(url):
-   
-
-    # HEADERS =  {
-    #     "Accept" : "*/*",
-    #     "Accept-Encoding": "gzip, deflate, br, zstd",
-    #     "Accept-Language": "en-US,en;q=0.5",
-    #     "User-Agent": "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:133.0) Gecko/20100101 Firefox/133.0"
-    # }
-
-    response = requests.get(url)
-
-    html = response.text
-
-    return html
+async def webscrape(url: str):
+    """
+    Asynchronously crawls a website using AsyncWebCrawler and returns structured data.
+    """
+    async with AsyncWebCrawler() as crawler:
+        try:
+            # Start crawling and get the full result
+            result = await crawler.arun(
+                url=f"{url}",  # Replace with your target URL
+                magic = True
+            )
+            return result  # Assuming 'result' is the complete structured data
+        except Exception as e:
+            print(f"Error during web crawling: {e}")
+            return None
         
-def generate_json(html):
-    load_dotenv()
-    api_key = os.getenv("MISTRAL_AGENT_KEY")
-    client = Mistral(api_key=api_key)
-    chat_response = client.agents.complete(
-    agent_id="ag:3458fc26:20241215:web-scraper:d9671ce7",
-    messages=[
-            {
-            "role": "user",
-            "content": "{html}".format(html=html),
-            },
-        ],
-    )
-    return chat_response.choices[0].message.content
+def generate_md(data):
+    if data:
+        try:
+            # Safely convert the result to MD
+            structured_data = data.markdown
+            with open("output1.txt", "a", encoding="utf-8") as f:
+                f.write(structured_data)
+            print("Crawling complete. Output saved to 'output.txt'.")
+            return None
+            
+        except (TypeError, ValueError) as e:
+            print(f"Error saving data: {e}")
+            return None
+            
+    else:
+        print("No data returned from the crawler.")
+        return None
     
+def wrapper(url : str):
+    data = asyncio.run(webscrape(url))
+    generate_md(data)
+    return data
 
-def main():
-    base_url = "https://docs.mistral.ai" 
-    html_content = scrape(base_url)
-    json_response = generate_json(html_content)
-    links = json_response['links']
-    json_data.pop('links', None)
-    with open('data.json', 'w') as json_file:
-        json.dump(json.loads(json_response), json_file)
-    
-    for link_info in links:
-            full_link = link_info['url'] if link_info['type'] == "external" else base_url + link_info['url']
-            print(full_link)
-            
-            scrape(full_link)
-            
-            with open("webscrape.html", "r", encoding="utf-8") as html_file:
-                html_content = html_file.read()
-            
-            json_response = generate_json(html_content)
-            json_data = json.loads(json_response)
-            json_data['links'] = []
-            
-            with open('data.json', 'a') as json_file:
-                json.dump(json_data, json_file)
-main()
+if __name__ == "__main__":
+    scrape_url = "https://react.dev/"
+    data = wrapper(url=scrape_url)
+    for key in data.links:
+        for link in data.links[key]:
+            if link['text'].casefold() in ['signup', 'signin', 'register', 'login', 'billing', 'pricing', 'contact', 'sign up', 'sign in', 'expert services']:
+                continue 
+            print(link['text'])
+            wrapper(link["href"])
