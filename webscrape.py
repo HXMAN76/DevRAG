@@ -27,7 +27,7 @@ def generate_md(data):
         try:
             # Safely convert the result to MD
             structured_data = data.markdown
-            with open("output1.txt", "a", encoding="utf-8") as f:
+            with open("output.txt", "a", encoding="utf-8") as f:
                 f.write(structured_data)
             print("Crawling complete. Output saved to 'output.txt'.")
             return None
@@ -46,7 +46,7 @@ def wrapper(url : str):
     return data
 
 if __name__ == "__main__":
-    scrape_url = "https://react.dev/"
+    scrape_url = "https://docs.github.com/en"
     data = wrapper(url=scrape_url)
     for key in data.links:
         for link in data.links[key]:
