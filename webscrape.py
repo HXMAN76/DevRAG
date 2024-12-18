@@ -11,7 +11,11 @@ async def webscrape(url: str):
             # Start crawling and get the full result
             result = await crawler.arun(
                 url=f"{url}",  # Replace with your target URL
-                magic = True
+                magic = True,
+                simulate_user = True,
+                override_navigator=True,
+                exclude_external_images = True,
+                exclude_social_media_links=True,
             )
             return result  # Assuming 'result' is the complete structured data
         except Exception as e:
