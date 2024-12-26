@@ -13,7 +13,7 @@ def load_document(file_path: str) -> str:
         return file.read()
 
 # Semantic Chunking using RecursiveCharacterTextSplitter
-def semantic_chunking(text: str, chunk_size: int = 400, chunk_overlap: int = 50):
+def semantic_chunking(text: str, chunk_size: int = 512, chunk_overlap: int = 50):
     """
     Split text into semantic chunks using RecursiveCharacterTextSplitter.
     :param text: The full text to split
@@ -49,7 +49,7 @@ def chuck_data(filename):
     text_content = load_document(input_file)
     
     # Perform semantic chunking
-    chunks = semantic_chunking(text_content, chunk_size=600, chunk_overlap=50)
+    chunks = semantic_chunking(text_content, chunk_size=512, chunk_overlap=50)
     
     # Return the list of chunks
     return chunks
