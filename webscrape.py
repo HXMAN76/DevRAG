@@ -46,8 +46,10 @@ def wrapper(url : str):
     return data
 
 if __name__ == "__main__":
+    isScraped = False
     scrape_url = "https://react.dev/"
     data = wrapper(url=scrape_url)
+    isScraped = True
     for key in data.links:
         for link in data.links[key]:
             if link['text'].casefold() in ['signup', 'signin', 'register', 'login', 'billing', 'pricing', 'contact', 'sign up', 'sign in', 'expert services']:

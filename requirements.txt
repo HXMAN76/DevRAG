@@ -2,3 +2,5 @@ mistralai
 requests
 python-dotenv
 streamlit
+crawl4ai
+asyncio
