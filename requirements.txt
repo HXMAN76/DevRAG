@@ -11,3 +11,7 @@ snowflake
 snowflake-connector-python
 pinecone-client
 openai
+langchain
+langchain-community
+pathlib
+
