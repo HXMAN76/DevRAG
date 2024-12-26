@@ -22,12 +22,12 @@ async def webscrape(url: str):
             print(f"Error during web crawling: {e}")
             return None
         
-def generate_md(data):
+def generate_md(data, file_name):
     if data:
         try:
             # Safely convert the result to MD
             structured_data = data.markdown
-            with open("output.txt", "a", encoding="utf-8") as f:
+            with open(f"{file_name}", "a", encoding="utf-8") as f:
                 f.write(structured_data)
             print("Crawling complete. Output saved to 'output.txt'.")
             return None
@@ -40,14 +40,15 @@ def generate_md(data):
         print("No data returned from the crawler.")
         return None
     
-def wrapper(url : str):
+def wrapper(url : str, file_name : str = "output.txt"):
     data = asyncio.run(webscrape(url))
-    generate_md(data)
+    generate_md(data, file_name)
     return data
 
 if __name__ == "__main__":
-    scrape_url = "https://docs.github.com/en"
-    data = wrapper(url=scrape_url)
+    scrape_url = "https://react.dev/learn"
+    file_name = "reactoutput.txt"
+    data = wrapper(scrape_url, file_name=file_name)
     for key in data.links:
         for link in data.links[key]:
             if link['text'].casefold() in ['signup', 'signin', 'register', 'login', 'billing', 'pricing', 'contact', 'sign up', 'sign in', 'expert services']:
