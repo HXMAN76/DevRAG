@@ -11,3 +11,4 @@ snowflake
 snowflake-connector-python
 pinecone-client
 openai
+snowflake
