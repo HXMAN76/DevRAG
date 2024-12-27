@@ -1,14 +1,10 @@
-mistralai
 requests
 python-dotenv
 streamlit
 langchain
 langchain-community
-langchain-mistralai
 asyncio
 crawl4ai
 snowflake
 snowflake-connector-python
-pinecone-client
-openai
 pathlib
