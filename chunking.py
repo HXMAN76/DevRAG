@@ -55,5 +55,6 @@ def chuck_data(filename):
     return chunks
 
 if __name__ == "__main__":
-    chunks_list = chuck_data()
+    chunks_list = chuck_data('output1')
     # The chunks are now stored in the `chunks_list` variable
+    print(len(chunks_list))
