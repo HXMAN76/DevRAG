@@ -1,10 +1,11 @@
 requests
 python-dotenv
 streamlit
-langchain
 langchain-community
 asyncio
 crawl4ai
 snowflake
 snowflake-connector-python
 pathlib
+snowflake-snowpark-python
+playwright
