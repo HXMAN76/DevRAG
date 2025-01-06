@@ -9,3 +9,4 @@ snowflake-connector-python
 pathlib
 snowflake-snowpark-python
 playwright
+pyPDF2
