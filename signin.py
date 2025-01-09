@@ -1,8 +1,10 @@
 import firebase_admin
 from firebase_admin import credentials, auth, firestore
 import os
+import pyrebase
 from dotenv import load_dotenv
 load_dotenv()
+
 class FirebaseAuth:
     def __init__(self):
         self.firebase_credentials = {
@@ -23,12 +25,12 @@ class FirebaseAuth:
         self.db = firestore.client()
 
     def get_user_id(self, email, password):
-        try:
-            user = auth.get_user_by_email(email)
-            return user.uid
-        except Exception as e:
-            print(f"Error getting user: {e}")
-            return None
+            try:
+                user = auth.sign_in_email_and_password(email=email, password=password)
+                return user.uid
+            except Exception as e:
+                print(f"Error creating user: {e}")
+                return None
 
     def get_user_info_firestore(self, user_id):
         try:

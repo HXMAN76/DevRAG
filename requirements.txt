@@ -8,3 +8,6 @@ crawl4ai
 snowflake
 snowflake-connector-python
 pathlib
+firebase_admin
+os
+python-dotenv
