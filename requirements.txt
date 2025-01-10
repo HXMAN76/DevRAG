@@ -1,7 +1,6 @@
 requests
 python-dotenv
 streamlit
-langchain
 langchain-community
 asyncio
 crawl4ai
@@ -11,3 +10,5 @@ pathlib
 firebase_admin
 os
 python-dotenv
+
+

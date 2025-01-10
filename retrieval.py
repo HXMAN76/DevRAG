@@ -2,17 +2,19 @@ import os
 from snowflake.core import Root
 from snowflake.snowpark import Session
 import json
+from dotenv import load_dotenv
+load_dotenv()
 
-q = "Generate how to create a login page using react give me report based analysis"
+q = "what is RAG, and how does it work?"
 
 CONNECTION_PARAMETERS = {
-    "account": "pdhifjj-sxb83619",
-    "user": 'devrag',
-    "password": 'Bsdb@123',
+    "account": os.getenv("SNOWFLAKE_ACCOUNT"),
+    "user": os.getenv("SNOWFLAKE_USER"),
+    "password": os.getenv("SNOWFLAKE_PASSWORD"),
     "role": "ACCOUNTADMIN",
-    "database": "DEVRAG_DB",
-    "warehouse": "DEVRAG",
-    "schema": "DEVRAG_SCHEMA",
+    "database": os.getenv("SNOWFLAKE_DATABASE"),
+    "warehouse": os.getenv("SNOWFLAKE_WAREHOUSE"),
+    "schema": os.getenv("SNOWFLAKE_SCHEMA"),
 }
 
 # Initialize the Snowflake session
