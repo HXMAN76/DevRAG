@@ -1,154 +1,203 @@
 import streamlit as st
+from firebase_auth import FirebaseAuth
+import re
 
-# Add FontAwesome for icons
+# Configure Streamlit page
+st.set_page_config(page_title="ChatBot Login", layout="centered")
+
+# Custom CSS for styling
 st.markdown("""
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        body {
-            background-color: #464646;
-        }
-        .sidebar {
-            background-color: black;
-            color: white;
-        }
-        .sidebar-btn {
-            color: white;
-            border: none;
-            background: none;
-            text-align: left;
-            padding: 10px;
-            font-size: 14px;
-            width: 100%;
-            cursor: pointer;
-        }
-        .sidebar-btn:hover {
-            color: #1db954;
-        }
-        .custom-input input {
-            width: 60%;
-            padding: 8px;
-            margin-left: 120px;
-            margin-right: 10px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-        }
-        .send-btn {
-            background-color: #1db954;
-            color: white;
-            border: none;
-            padding: 10px 15px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 16px;
-        }
-        .send-btn:hover {
-            background-color: #18a349;
-        }
-        .profile-container {
-            display: flex;
-            align-items: center;
-            padding: 10px;
-            margin-bottom: 10px;
-        }
-        .profile-pic {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background-color: #ccc;
-            margin-right: 10px;
-        }
-        .profile-details {
-            font-size: 12px;
-            color: white;
-        }
+    /* Main colors */
+    :root {
+        --primary-orange: #FF6B35;
+        --secondary-orange: #FF8C61;
+        --black: #2F2F2F;
+    }
+    
+    /* Custom button styles */
+    .st-key-login button,
+    .st-key-signup button,
+    .st-key-forgot-password button,
+    .st-key-reset-password button,
+    .st-key-back-to-login button {
+        background-color: var(--primary-orange);
+        color: white;
+        border: none;
+        width: 100%;
+        padding: 8px 16px;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+    }
+    
+    .st-key-login button:hover,
+    .st-key-signup button:hover,
+    .st-key-forgot-password button:hover,
+    .st-key-reset-password button:hover,
+    .st-key-back-to-login button:hover {
+        background-color: var(--secondary-orange);
+    }
+    
+    .title {
+        color: var(--black);
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+    
+    .error-msg {
+        color: red;
+        font-size: 0.9em;
+        margin-top: 0.5em;
+    }
+    
+    .stTextInput > div > div > input {
+        border-radius: 5px;
+        border: 1px solid #ccc;
+    }
     </style>
 """, unsafe_allow_html=True)
 
-st.markdown("""
-    <style>
-        /* Set background color for the whole page */
-        body {
-            background-color: #464646 !important;
-        }
-        [data-testid="stAppViewContainer"] {
-            background: linear-gradient(360deg, #121212, #1db954);
-        }
-        [data-testid="stSidebar"] {
-            background-color: #181818;
-        }
-        [data-testid="stHeader"] {
-            background-color: #1db954;
-        }
-        .hero-section {
-            display: flex;
-            flex-direction: column;
-            background-color: hsl(140, 34%, 22%);
-            color: white;
-            padding: 20px;
-            border-radius: 10px;
-        }
-    </style>
-""", unsafe_allow_html=True)
+def initialize_session_state():
+    if 'current_form' not in st.session_state:
+        st.session_state.current_form = 'login'
+    if 'auth' not in st.session_state:
+        st.session_state.auth = FirebaseAuth()
+    if 'user_id' not in st.session_state:
+        st.session_state.user_id = None
 
-# Sidebar layout
-with st.sidebar:
-    # Profile container
-    st.markdown("""
-        <div class="profile-container">
-            <div class="profile-pic"></div>
-            <div class="profile-details">
-                <strong>USER-ID</strong><br>
-                user-name
-            </div>
-        </div>
-    """, unsafe_allow_html=True)
+def validate_input(email, password=None):
+    errors = []
+    if not email:
+        errors.append("Email is required")
+    elif not st.session_state.auth.validate_email(email):
+        errors.append("Invalid email format")
     
-    # "Start a new chat" button
-    st.markdown("""
-        <button class="sidebar-btn" style="background-color: #1db954; color: white; border-radius: 5px;">
-            <i class="fa fa-plus"></i> Start a new chat
-        </button>
-    """, unsafe_allow_html=True)
+    if password is not None:
+        if not password:
+            errors.append("Password is required")
+        elif not st.session_state.auth.validate_password(password):
+            errors.append("Password must be at least 6 characters")
     
-    # Sidebar options
-    st.markdown("""
-        <button class="sidebar-btn"><i class="fa fa-trash"></i> Clear all conversations</button>
-        <button class="sidebar-btn"><i class="fa fa-sun"></i> Switch Light Mode</button>
-        <button class="sidebar-btn"><i class="fa fa-info-circle"></i> About Us</button>
-        <button class="sidebar-btn" style = "color: red;"><i class="fa fa-power-off"></i> Log out</button>
-    """, unsafe_allow_html=True)
+    return errors
 
-# Main content
-st.markdown("""
-    <div class="hero-section">
-        <h1 style="text-align: center;">Welcome to <span style="color: #1db954;">DevRAG</span></h1>
-        <p style="text-align: center; font-size: 14px;">
-            Empowering developers with instant, AI-driven insights by combining Retrieval-Augmented Generation and dynamic web-scraped knowledge.
-        </p>
-        <div class="custom-input">
-            <input type="text" placeholder="Example: Explain quantum computing in simple terms"/>
-            <button class="send-btn"><i class="fa fa-paper-plane"></i></button>
-        </div>
-    </div>
-""", unsafe_allow_html=True)
+def main():
+    initialize_session_state()
+    
+    if st.session_state.user_id is None:
+        st.markdown("<h1 class='title'>ChatBot Assistant</h1>", unsafe_allow_html=True)
+        
+        # Login Form
+        if st.session_state.current_form == 'login':
+            st.subheader("Login", anchor=False)
+            with st.form("login_form"):
+                email = st.text_input("Email")
+                password = st.text_input("Password", type="password")
+                submit = st.form_submit_button("Login")
+                
+                if submit:
+                    errors = validate_input(email, password)
+                    if errors:
+                        for error in errors:
+                            st.error(error)
+                    else:
+                        try:
+                            user_id = st.session_state.auth.login_user(email, password)
+                            st.session_state.user_id = user_id
+                            st.success("Login successful!")
+                            st.rerun()
+                        except Exception as e:
+                            st.error(str(e))
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                if st.button("Forgot Password?", key="forgot-password"):
+                    st.session_state.current_form = 'forgot_password'
+                    st.rerun()
+            with col2:
+                if st.button("New User? Sign Up", key="new-user"):
+                    st.session_state.current_form = 'signup'
+                    st.rerun()
+        
+        # Signup Form
+        elif st.session_state.current_form == 'signup':
+            st.subheader("Sign Up", anchor=False)
+            with st.form("signup_form"):
+                name = st.text_input("Full Name")
+                email = st.text_input("Email")
+                password = st.text_input("Password", type="password")
+                occupation = st.text_input("Occupation")
+                purpose = st.selectbox("Purpose of Use", 
+                                     ["Personal", "Business", "Education", "Research", "Other"])
+                description = st.text_area("Description")
+                submit = st.form_submit_button("Sign Up")
+                
+                if submit:
+                    errors = validate_input(email, password)
+                    if not name:
+                        errors.append("Name is required")
+                    
+                    if errors:
+                        for error in errors:
+                            st.error(error)
+                    else:
+                        try:
+                            additional_data = {
+                                "name": name,
+                                "occupation": occupation,
+                                "purpose": purpose,
+                                "description": description
+                            }
+                            user_id = st.session_state.auth.register_user(email, password, additional_data)
+                            st.success("Registration successful! Please login.")
+                            st.session_state.current_form = 'login'
+                            st.rerun()
+                        except Exception as e:
+                            st.error(str(e))
+            
+            if st.button("Already Registered? Login Now", key="back-to-login"):
+                st.session_state.current_form = 'login'
+                st.rerun()
+        
+        # Forgot Password Form
+        elif st.session_state.current_form == 'forgot_password':
+            st.subheader("Reset Password", anchor=False)
+            with st.form("forgot_password_form"):
+                email = st.text_input("Email")
+                submit = st.form_submit_button("Send Reset Link")
+                
+                if submit:
+                    errors = validate_input(email)
+                    if errors:
+                        for error in errors:
+                            st.error(error)
+                    else:
+                        try:
+                            st.session_state.auth.reset_password(email)
+                            st.success("Password reset link sent to your email!")
+                            st.session_state.current_form = 'login'
+                            st.rerun()
+                        except Exception as e:
+                            st.error(str(e))
+            
+            if st.button("Back to Login", key="back-to-login"):
+                st.session_state.current_form = 'login'
+                st.rerun()
+    
+    else:
+        # User is logged in
+        st.title("Welcome!")
+        user_info = st.session_state.auth.get_user_info(st.session_state.user_id)
+        if user_info:
+            st.write(f"Name: {user_info.get('name', 'N/A')}")
+            st.write(f"Email: {user_info.get('email', 'N/A')}")
+            st.write(f"Occupation: {user_info.get('occupation', 'N/A')}")
+            st.write(f"Purpose: {user_info.get('purpose', 'N/A')}")
+        
+        if st.button("Logout"):
+            st.session_state.user_id = None
+            st.session_state.current_form = 'login'
+            st.rerun()
 
-# Three features section
-st.markdown("""
-    <div style="display: flex; justify-content: space-around; margin-top: 30px; color: white;">
-        <div style="text-align: center;">
-            <i class="fa fa-magic" style="font-size: 30px; color: #1db954;"></i>
-            <h4>Clear and Precise</h4>
-            <p style="font-size: 12px;">Accurate insights for your queries.</p>
-        </div>
-        <div style="text-align: center;">
-            <i class="fa fa-user" style="font-size: 30px; color: #1db954;"></i>
-            <h4>Personalized Answers</h4>
-            <p style="font-size: 12px;">Tailored responses for better efficiency.</p>
-        </div>
-        <div style="text-align: center;">
-            <i class="fa fa-line-chart" style="font-size: 30px; color: #1db954;"></i>
-            <h4>Increased Efficiency</h4>
-            <p style="font-size: 12px;">Streamline your development process.</p>
-        </div>
-    </div>
-""", unsafe_allow_html=True)
+if __name__ == "__main__":
+    main()
