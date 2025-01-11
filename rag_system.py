@@ -2,14 +2,57 @@ import asyncio
 import json
 import os
 from typing import List, Optional
-
 import snowflake.connector
 from crawl4ai import AsyncWebCrawler
 from dotenv import load_dotenv
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from snowflake.core import Root
 from snowflake.snowpark import Session
+from playwright.sync_api import sync_playwright
+from bs4 import BeautifulSoup
+import re
 
+class GithubScraper:
+    def __init__(self, url):
+        self.url = url
+
+    def webscrape_content(self):
+        with sync_playwright() as p:
+            browser = p.chromium.launch(headless=True)
+            page = browser.new_page()
+            page.goto(self.url)
+            page.wait_for_timeout(5000)  # Wait for content to load
+            
+            html_content = page.content()  # Get the page content
+            browser.close()
+            return html_content
+
+    @staticmethod
+    def extract_main_content(html):
+        soup = BeautifulSoup(html, 'html.parser')
+        textareas = soup.find_all('textarea')  # Find all <textarea> elements
+        if textareas:
+            return textareas
+
+    @staticmethod
+    def replace_hub_with_ingest(url):
+        if "github.com" in url:
+            return url.replace("github.com", "gitingest.com")
+        return url
+
+    def scrape_github(self):
+        self.url = self.replace_hub_with_ingest(self.url)
+        html_content = self.webscrape_content()
+        return self.extract_main_content(html_content)
+    
+class DomainExtractor:
+    @staticmethod
+    def extract_domain(url):
+        match = re.search(r"https?://(?:www\.)?([^./]+)\.([^./]+)\.", url)
+        if match:
+            return match.group(2)
+        return None
+    
 class WebScraper:
     def __init__(self):
         self.unwanted = ['signup', 'signin', 'register', 'login', 'billing', 
@@ -137,8 +180,11 @@ def main():
     scraper = WebScraper()
     processor = TextProcessor()
     snowflake = SnowflakeManager()
+    git = GithubScraper(website_link)
+    domain_name = DomainExtractor()
     
     try:
+        
         # Connect to Snowflake
         snowflake.connect()
         

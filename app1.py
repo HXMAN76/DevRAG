@@ -1,5 +1,5 @@
 import streamlit as st
-from firebase_snowflake_auth import FirebaseSnowflakeAuth
+from firebase_auth1 import FirebaseAuth
 import re
 
 # Configure Streamlit page
@@ -55,12 +55,6 @@ st.markdown("""
         border-radius: 5px;
         border: 1px solid #ccc;
     }
-
-    /* Loading spinner for background processes */
-    .stSpinner {
-        text-align: center;
-        margin: 20px 0;
-    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -68,7 +62,7 @@ def initialize_session_state():
     if 'current_form' not in st.session_state:
         st.session_state.current_form = 'login'
     if 'auth' not in st.session_state:
-        st.session_state.auth = FirebaseSnowflakeAuth()
+        st.session_state.auth = FirebaseAuth()
     if 'user_id' not in st.session_state:
         st.session_state.user_id = None
 
@@ -155,8 +149,7 @@ def main():
                                 "description": description
                             }
                             user_id = st.session_state.auth.register_user(email, password, additional_data)
-                            st.success("Registration successful! Snowflake resources are being set up in the background.")
-                            st.info("You can proceed to login while we complete the setup.")
+                            st.success("Registration successful! Please login.")
                             st.session_state.current_form = 'login'
                             st.rerun()
                         except Exception as e:
