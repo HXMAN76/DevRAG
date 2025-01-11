@@ -10,5 +10,9 @@ pathlib
 firebase_admin
 os
 python-dotenv
-
-
+json
+bs4
+re
+langchain
+playwright
+typing
