@@ -181,7 +181,7 @@ def main():
     processor = TextProcessor()
     snowflake = SnowflakeManager()
     git = GithubScraper(website_link)
-    domain_name = DomainExtractor()
+    domain_name = DomainExtractor().extract_domain(website_link)
     
     try:
         
