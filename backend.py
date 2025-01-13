@@ -147,9 +147,9 @@ class SnowflakeManager:
         root = Root(self.session)
         search_service = (
             root
-            .databases["DEVRAG_DB"]
-            .schemas["DEVRAG_SCHEMA"]
-            .cortex_search_services["DEVRAG"]
+            .databases[os.getenv("SNOWFLAKE_DATABASE")]
+            .schemas[os.getenv("SNOWFLAKE_SCHEMA")]
+            .cortex_search_services[os.getenv("SNOWFLAKE_WAREHOUSE")]
         )
 
         search_results = search_service.search(
@@ -199,15 +199,22 @@ class PDFScraper:
 
 
 def main():
-    website_link = "https://www.mongodb.com/docs/"
-    github_link = ""
-    pdf_path = ""
+    website_link = input("Enter the website link: ")
+    github_link = input("Enter the github link: ")
+    pdf_path = input("Enter the pdf path: ")
+        
     query = input("Enter the query: ")
-
-    scraper = WebScraper(website_link)
+    if website_link:
+        scraper = WebScraper(website_link)
+    if github_link:
+        git = GithubScraper(github_link)
+        github_content = git.scrape_github()
+    if pdf_path:
+        pdf_scraper = PDFScraper()
+        pdf_content = pdf_scraper.extract_text_from_pdf(pdf_path)
     processor = TextProcessor()
     snowflake = SnowflakeManager()
-    git = GithubScraper(github_link)
+    
     
     domain_name = DomainExtractor().extract_domain(website_link)
 
@@ -223,13 +230,10 @@ def main():
             # Store chunks in Snowflake
             for chunk in chunks:
                 snowflake.insert_document(website_link, chunk)
-                
-        if github_link:
-            # Scrape content from GitHub
-            github_content = git.scrape_github()
-            if github_content:
-                for content in github_content:
-                    snowflake.insert_document(github_link, content)
+                  
+        if github_content:
+            for content in github_content:
+                snowflake.insert_document(github_link, content)
         # Generate response
         response = snowflake.search_and_generate(query)
         print(response)
