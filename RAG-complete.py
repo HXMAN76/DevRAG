@@ -71,12 +71,12 @@ if __name__ == "__main__":
     query = input("Enter the query: ")
 
     conn = snowflake.connector.connect(
-    user='devrag',
-    password='Bsdb@123',
-    account="pdhifjj-sxb83619",
-    database="DEVRAG_DB",
-    schema="DEVRAG_SCHEMA",
-    warehouse="DEVRAG"
+    user=os.getenv("SNOWFLAKE_USER"),
+    password=os.getenv("SNOWFLAKE_PASSWORD"),
+    account=os.getenv("SNOWFLAKE_ACCOUNT"),
+    database=os.getenv("SNOWFLAKE_DATABASE"),
+    schema=os.getenv("SNOWFLAKE_SCHEMA"),
+    warehouse=os.getenv("SNOWFLAKE_WAREHOUSE")
     )
     cursor = conn.cursor()
 
