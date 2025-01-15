@@ -248,6 +248,7 @@ def main():
                 snowflake.insert_document(pdf_path, content)
         # Generate response
         response = snowflake.search_and_generate(query)
+        
         print(response)
 
     finally:
