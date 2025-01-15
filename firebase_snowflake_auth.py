@@ -77,7 +77,7 @@ class FirebaseSnowflakeAuth:
                     CREATE OR REPLACE CORTEX SEARCH SERVICE {user_id}_{service}search
                     ON content
                     WAREHOUSE = '{os.getenv("SNOWFLAKE_WAREHOUSE")}'
-                    TARGET_LAG = '10 minutes'
+                    TARGET_LAG = '1 minutes'
                     EMBEDDING_MODEL = 'snowflake-arctic-embed-l-v2.0'
                     AS (
                         SELECT content
