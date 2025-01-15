@@ -202,14 +202,16 @@ def main():
     website_link = input("Enter the website link: ")
     github_link = input("Enter the github link: ")
     pdf_path = input("Enter the pdf path: ")
-        
+    github_content = None
+    pdf_content = None
+    scraper = None
     query = input("Enter the query: ")
-    if website_link:
+    if website_link == "\n":
         scraper = WebScraper(website_link)
-    if github_link:
+    if github_link == "\n":
         git = GithubScraper(github_link)
         github_content = git.scrape_github()
-    if pdf_path:
+    if pdf_path == "\ncle":
         pdf_scraper = PDFScraper()
         pdf_content = pdf_scraper.extract_text_from_pdf(pdf_path)
     processor = TextProcessor()
