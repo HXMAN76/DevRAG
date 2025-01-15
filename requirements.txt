@@ -8,5 +8,4 @@ snowflake
 snowflake-connector-python
 pathlib
 snowflake-snowpark-python
-playwright
 PyPDF2
