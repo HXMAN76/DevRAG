@@ -72,7 +72,11 @@ class WebScraper:
             except Exception as e:
                 print(f"Error during web crawling: {e}")
                 return None
-
+    def process_text(self, text: str):
+        text_parser = TextProcessor()
+        chunks = text_parser.chunk_text(text)
+        return chunks
+    
     def scrape(self) -> str:
         scrape_data = ''
         data = asyncio.run(self._webscrape(self.url))
@@ -92,7 +96,7 @@ class WebScraper:
                 if sub_data and sub_data.markdown:
                     scrape_data += sub_data.markdown
 
-        return scrape_data
+        return self.process_text(scrape_data)
 
 
 class TextProcessor:
@@ -196,7 +200,11 @@ class PDFScraper:
             return "Error: File not found. Please provide a valid PDF file path."
         except Exception as e:
             return f"An error occurred: {e}"
-
+    def process_pdf(self, pdf_path):
+        pdf_text = self.extract_text_from_pdf(pdf_path)
+        text_parser = TextProcessor()
+        chunks = text_parser.chunk_text(pdf_text)
+        return chunks
 
 def main():
     website_link = input("Enter the website link: ")
@@ -211,9 +219,9 @@ def main():
     if github_link == "\n":
         git = GithubScraper(github_link)
         github_content = git.scrape_github()
-    if pdf_path == "\ncle":
+    if pdf_path == "\n":
         pdf_scraper = PDFScraper()
-        pdf_content = pdf_scraper.extract_text_from_pdf(pdf_path)
+        pdf_content = pdf_scraper.process_pdf(pdf_path)
     processor = TextProcessor()
     snowflake = SnowflakeManager()
     
@@ -227,15 +235,17 @@ def main():
         if website_link:
             # Scrape and process content
             content = scraper.scrape()
-            chunks = processor.chunk_text(content)
-
             # Store chunks in Snowflake
-            for chunk in chunks:
+            for chunk in content:
                 snowflake.insert_document(website_link, chunk)
                   
         if github_content:
             for content in github_content:
                 snowflake.insert_document(github_link, content)
+                
+        if pdf_content:
+            for content in pdf_content:
+                snowflake.insert_document(pdf_path, content)
         # Generate response
         response = snowflake.search_and_generate(query)
         print(response)
