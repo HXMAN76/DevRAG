@@ -1,9 +1,8 @@
 import asyncio
 import json
 import os
-from typing import List, Optional
+from typing import List, Optional, Set, Tuple
 import snowflake.connector
-from crawl4ai import AsyncWebCrawler
 from dotenv import load_dotenv
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from snowflake.core import Root
@@ -11,6 +10,7 @@ from snowflake.snowpark import Session
 from playwright.sync_api import sync_playwright
 from bs4 import BeautifulSoup
 import re
+import aiohttp
 
 class GithubScraper:
     def __init__(self, url):
@@ -52,48 +52,122 @@ class DomainExtractor:
         if match:
             return match.group(2)
         return None
-    
-class WebScraper:
-    def __init__(self):
-        self.unwanted = ['signup', 'signin', 'register', 'login', 'billing', 
-                        'pricing', 'contact', 'sign up', 'sign in', 'expert services']
-        self.social_media = ['youtube', 'twitter', 'facebook', 'linkedin']
 
-    async def _webscrape(self, url: str) -> Optional[object]:
-        async with AsyncWebCrawler() as crawler:
-            try:
-                return await crawler.arun(
-                    url=url,
-                    magic=True,
-                    simulate_user=True, 
-                    override_navigator=True,
-                    exclude_external_images=True,
-                    exclude_social_media_links=True,
-                )
-            except Exception as e:
-                print(f"Error during web crawling: {e}")
-                return None
-
-    def scrape(self, url: str) -> str:
-        scrape_data = ''
-        data = asyncio.run(self._webscrape(url))
+class WebCrawler:
+    def __init__(self, max_depth: int = 3, max_concurrent: int = 10):
+        self.max_depth = max_depth
+        self.max_concurrent = max_concurrent
+        self.visited = set()
+        self.results = []
         
-        if data and data.markdown:
-            scrape_data += data.markdown
-            
-        for key in data.links:
-            for link in data.links[key]:
-                text = link.get('text', '').casefold()
-                href = link.get('href', '')
+        # Compile regex patterns
+        self.skip_extensions = re.compile(r'\.(pdf|jpg|jpeg|png|gif|css|js|xml|ico)$', re.I)
+        
+    async def fetch_page(self, url: str, session: aiohttp.ClientSession) -> Tuple[Optional[str], Optional[str], Set[str]]:
+        """Fetch and parse a single page."""
+        try:
+            async with session.get(url, timeout=30) as response:
+                if response.status != 200:
+                    return None, None, set()
+                    
+                html = await response.text()
+                soup = BeautifulSoup(html, 'html.parser')
                 
-                if text in self.unwanted or any(platform in href for platform in self.social_media):
-                    continue
+                # Extract title
+                title = soup.title.string if soup.title else url
+                
+                # Extract content
+                for element in soup(['script', 'style', 'header', 'footer', 'nav']):
+                    element.decompose()
+                content = ' '.join(text.strip() for text in soup.stripped_strings if text.strip())
+                
+                # Extract links
+                base_domain = urlparse(url).netloc
+                links = set()
+                
+                for a in soup.find_all('a', href=True):
+                    href = a['href']
+                    if not href or href.startswith(('#', 'mailto:', 'tel:')):
+                        continue
+                        
+                    try:
+                        full_url = urljoin(url, href)
+                        parsed = urlparse(full_url)
+                        
+                        # Only include links to the same domain without excluded extensions
+                        if (parsed.netloc == base_domain and 
+                            not self.skip_extensions.search(parsed.path)):
+                            links.add(full_url)
+                    except Exception:
+                        continue
+                
+                return title, content, links
+                
+        except Exception as e:
+            print(f"Error fetching {url}: {str(e)}")
+            return None, None, set()
+
+    async def crawl(self, start_url: str) -> str:
+        """Crawl the website starting from the given URL."""
+        async with aiohttp.ClientSession() as session:
+            semaphore = asyncio.Semaphore(self.max_concurrent)
+            
+            # Start with initial URL
+            to_visit = [(start_url, 0)]  # (url, depth)
+            
+            while to_visit:
+                current_batch = []
+                next_batch = []
+                
+                # Group URLs by current depth
+                current_depth = min(depth for _, depth in to_visit)
+                
+                for url, depth in to_visit:
+                    if depth == current_depth:
+                        current_batch.append(url)
+                    else:
+                        next_batch.append((url, depth))
+                
+                if current_depth >= self.max_depth:
+                    break
+                               
+                # Process current batch
+                async def process_url(url):
+                    async with semaphore:
+                        return url, await self.fetch_page(url, session)
+                
+                tasks = [process_url(url) for url in current_batch]
+                results = await asyncio.gather(*tasks)
+                
+                # Process results and collect new URLs
+                to_visit = next_batch
+                
+                for url, (title, content, links) in results:
+                    if not content:
+                        continue
+                        
+                    self.visited.add(url)
+                    self.results.append({
+                        'depth': current_depth,
+                        'url': url,
+                        'title': title,
+                        'content': content
+                    })
                     
-                sub_data = asyncio.run(self._webscrape(link["href"]))
-                if sub_data and sub_data.markdown:
-                    scrape_data += sub_data.markdown
-                    
-        return scrape_data
+                    # Add new links to visit
+                    if current_depth + 1 < self.max_depth:
+                        new_links = links - self.visited
+                        to_visit.extend((link, current_depth + 1) 
+                                     for link in new_links)
+            
+            # Generate output sorted by depth
+            output = []
+            for depth in range(self.max_depth):
+                depth_content = [item for item in self.results if item['depth'] == depth]
+                for item in depth_content:
+                    output.append(f"{item['content']}\n\n")
+            
+            return '\n'.join(output)
 
 class TextProcessor:
     def __init__(self, chunk_size: int = 512, chunk_overlap: int = 50):
@@ -174,23 +248,22 @@ class SnowflakeManager:
             return f"Error: {e}"
 
 def main():
-    website_link = ""
+    website_link = "https://docs.github.com/en"  # Replace with the URL you want to scrape
     query = input("Enter the query: ")
     
-    scraper = WebScraper()
+    crawler = WebCrawler(max_depth=3, max_concurrent=5)
     processor = TextProcessor()
     snowflake = SnowflakeManager()
     git = GithubScraper(website_link)
     domain_name = DomainExtractor().extract_domain(website_link)
     
     try:
-        
         # Connect to Snowflake
         snowflake.connect()
         
         if website_link:
             # Scrape and process content
-            content = scraper.scrape(website_link)
+            content = asyncio.run(crawler.crawl(website_link))
             chunks = processor.chunk_text(content)
             
             # Store chunks in Snowflake

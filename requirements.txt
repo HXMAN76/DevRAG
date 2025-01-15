@@ -7,5 +7,10 @@ crawl4ai
 snowflake
 snowflake-connector-python
 pathlib
-snowflake-snowpark-python
-PyPDF2
+firebase_admin
+python-dotenv
+bs4
+langchain
+typing
+pyrebase
+pycryptodome
