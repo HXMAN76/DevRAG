@@ -3,7 +3,11 @@ import json
 import os
 import re
 from typing import List, Optional
-
+import logging
+# Set logging level to WARNING to suppress unwanted info logs
+logging.getLogger("snowflake.connector").setLevel(logging.WARNING)
+logging.getLogger("snowflake.snowpark").setLevel(logging.WARNING)
+logging.getLogger("snowflake.core").setLevel(logging.WARNING)
 import snowflake.connector
 from bs4 import BeautifulSoup
 from crawl4ai import AsyncWebCrawler
