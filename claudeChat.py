@@ -1,5 +1,5 @@
 import streamlit as st
-from backend import PDFScraper, SnowflakeManager
+from backend import PDFScraper, SnowflakeManager , TextProcessor
 import tempfile
 import os
 import asyncio
@@ -89,7 +89,6 @@ class AsyncWebScraper:
                                 print(f"Error processing sub-link {href}: {e}")
                                 continue
 
-                from backend import TextProcessor
                 processor = TextProcessor()
                 return processor.chunk_text(scrape_data)
         except Exception as e:
