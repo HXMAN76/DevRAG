@@ -146,27 +146,79 @@ class SnowflakeManager:
         if self.session:
             self.session.close()
 
-    def insert_document(self, web_url: str, content: str):
-        query = "INSERT INTO DEVRAG_SCHEMA.DOCUMENT (WEBSITE_URL, CONTENT) VALUES (%s, %s)"
-        self.cursor.execute(query, (web_url, content))
-        self.conn.commit()
+    def insert_into_github_rag(self,user_id,content):
+        if(content):
+            insert_query = f"""INSERT INTO {user_id}_github (content) VALUES {content}"""
+            self.cursor.execute(insert_query)
+            self.conn.commit()
+    def insert_into_personal_rag(self,user_id,content):
+        if(content):
+            insert_query = f"""INSERT INTO {user_id}_rag (content) VALUES {content}"""
+            self.cursor.execute(insert_query)
+            self.conn.commit()
+    def insert_into_pdf_rag(self,user_id,content):
+        if(content):
+            insert_query = f"""INSERT INTO {user_id}_pdf (content) VALUES {content}"""
+            self.cursor.execute(insert_query)
+            self.conn.commit()
 
-    def search_and_generate(self, query: str) -> str:
+    def search(self,user_id, query: str) -> list:
         root = Root(self.session)
-        search_service = (
+
+        common_search_service = (
             root
             .databases[os.getenv("SNOWFLAKE_DATABASE")]
             .schemas[os.getenv("SNOWFLAKE_SCHEMA")]
             .cortex_search_services[os.getenv("SNOWFLAKE_WAREHOUSE")]
         )
-
-        search_results = search_service.search(
+        common_search_results = common_search_service.search(
             query=query,
             columns=["CONTENT"],
             limit=5
         )
+        common_response = json.dumps(common_search_results.to_dict())
+        
+        personal_search_service = (
+            root
+            .databases[os.getenv("SNOWFLAKE_DATABASE")]
+            .schemas[os.getenv("SNOWFLAKE_SCHEMA")]
+            .cortex_search_services[f"{user_id}_ragsearch"]
+        )
+        personal_search_results = personal_search_service.search(
+            query=query,
+            columns=["CONTENT"],
+            limit=5
+        )
+        personal_response = json.dumps(personal_search_results.to_dict())
 
-        response = json.dumps(search_results.to_dict())
+        github_search_service = (
+            root
+            .databases[os.getenv("SNOWFLAKE_DATABASE")]
+            .schemas[os.getenv("SNOWFLAKE_SCHEMA")]
+            .cortex_search_services[f"{user_id}_githubsearch"]
+        )
+        github_search_results = github_search_service.search(
+            query=query,
+            columns=["CONTENT"],
+            limit=5
+        )
+        github_response = json.dumps(github_search_results.to_dict())
+
+        pdf_search_service = (
+            root
+            .databases[os.getenv("SNOWFLAKE_DATABASE")]
+            .schemas[os.getenv("SNOWFLAKE_SCHEMA")]
+            .cortex_search_services[f"{user_id}_pdfsearch"]
+        )
+        pdf_search_results = pdf_search_service.search(
+            query=query,
+            columns=["CONTENT"],
+            limit=5
+        )
+        pdf_response = json.dumps(pdf_search_results.to_dict())
+        return [common_response,personal_response,github_response, pdf_response]
+    
+    def generation(self,query,response):
         generation_query = f"""
             SELECT SNOWFLAKE.CORTEX.COMPLETE(
                 'mistral-large2',
@@ -175,14 +227,9 @@ class SnowflakeManager:
                 Query: {query}$$
             );
         """
-
-        try:
-            generation = self.session.sql(generation_query).collect()
-            return generation[0][0]
-        except Exception as e:
-            return f"Error: {e}"
-
-
+        generation = self.session.sql(generation_query).collect()
+        return generation[0][0]
+    
 class PDFScraper:
     @staticmethod
     def extract_text_from_pdf(pdf_path: str) -> str:
