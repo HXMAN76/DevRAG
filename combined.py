@@ -204,7 +204,9 @@ class FirebaseAuth:
                 user_data = {
                     'email': email,
                     'created_at': datetime.now(),
-                    **additional_data
+                    **additional_data,
+                    "past_converations": [],
+                    "conversation_summary":[]
                 }
                 self.db.collection('user_data').document(user.uid).set(user_data)
             
