@@ -12,5 +12,7 @@ python-dotenv
 bs4
 langchain
 typing
-pyrebase
+beautifulsoup4
+selenium 
+webdriver-manager
 pycryptodome
