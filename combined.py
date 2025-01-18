@@ -7,6 +7,8 @@ import re
 from datetime import datetime
 import snowflake.connector
 import threading
+import requests
+import json
 
 # Configure Streamlit page
 st.set_page_config(page_title="ChatBot Login", layout="centered")
@@ -94,7 +96,7 @@ class FirebaseAuth:
             firebase_admin.initialize_app(cred)
         
         self.db = firestore.client()
-
+        self.api_key = os.getenv("FIREBASE_API_KEY")
     def _get_snowflake_connection(self):
         """Create and return a Snowflake connection"""
         return snowflake.connector.connect(
@@ -151,15 +153,43 @@ class FirebaseAuth:
         return len(password) >= 6
 
     def login_user(self, email, password):
-        """Login user with email and password"""
+        """Login user with email and password using Firebase Auth REST API"""
         try:
-            user = auth.get_user_by_email(email)
-            # Note: Firebase Admin SDK doesn't verify passwords
-            # In production, you'd need to implement a secure password verification system
-            # This is a simplified version for demonstration
-            return user.uid
+            # Firebase Auth REST API endpoint for email/password sign-in
+            auth_url = f"https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key={self.api_key}"
+            
+            # Request payload
+            payload = {
+                "email": email,
+                "password": password,
+                "returnSecureToken": True
+            }
+            
+            # Make the authentication request
+            response = requests.post(auth_url, json=payload)
+            data = response.json()
+            
+            # Check for errors
+            if response.status_code != 200:
+                error_message = data.get('error', {}).get('message', 'Authentication failed')
+                if error_message == 'INVALID_PASSWORD':
+                    raise Exception("Invalid password")
+                elif error_message == 'EMAIL_NOT_FOUND':
+                    raise Exception("Email not found")
+                else:
+                    raise Exception("Login failed. Please try again.")
+            
+            # Get the user ID from the response
+            user_id = data.get('localId')
+            if not user_id:
+                raise Exception("Failed to get user information")
+                
+            return user_id
+            
+        except requests.exceptions.RequestException as e:
+            raise Exception("Network error. Please check your connection.")
         except Exception as e:
-            raise Exception("Invalid email or password")
+            raise e
 
     def register_user(self, email, password, additional_data=None):
         """Register new user with email and password"""

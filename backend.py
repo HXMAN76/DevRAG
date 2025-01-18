@@ -162,9 +162,10 @@ class SnowflakeManager:
             self.cursor.execute(insert_query)
             self.conn.commit()
 
+
     def search(self,user_id, query: str) -> list:
         root = Root(self.session)
-
+        # Search in the common search service
         common_search_service = (
             root
             .databases[os.getenv("SNOWFLAKE_DATABASE")]
@@ -177,7 +178,7 @@ class SnowflakeManager:
             limit=5
         )
         common_response = json.dumps(common_search_results.to_dict())
-        
+        # Search in the personal search service
         personal_search_service = (
             root
             .databases[os.getenv("SNOWFLAKE_DATABASE")]
@@ -190,7 +191,7 @@ class SnowflakeManager:
             limit=5
         )
         personal_response = json.dumps(personal_search_results.to_dict())
-
+        # Search in the github search service
         github_search_service = (
             root
             .databases[os.getenv("SNOWFLAKE_DATABASE")]
@@ -203,7 +204,7 @@ class SnowflakeManager:
             limit=5
         )
         github_response = json.dumps(github_search_results.to_dict())
-
+        # Search in the pdf search service
         pdf_search_service = (
             root
             .databases[os.getenv("SNOWFLAKE_DATABASE")]
@@ -217,6 +218,7 @@ class SnowflakeManager:
         )
         pdf_response = json.dumps(pdf_search_results.to_dict())
         return [common_response,personal_response,github_response, pdf_response]
+    
     
     def generation(self,query,response):
         generation_query = f"""
