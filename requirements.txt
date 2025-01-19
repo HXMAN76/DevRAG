@@ -15,4 +15,3 @@ typing
 beautifulsoup4
 selenium 
 webdriver-manager
-pycryptodome
