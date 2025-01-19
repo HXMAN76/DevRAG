@@ -11,66 +11,11 @@ import requests
 import json
 
 # Configure Streamlit page
-st.set_page_config(page_title="ChatBot Login", layout="centered")
+st.set_page_config(page_title="Login", layout="centered")
 
 # Custom CSS for styling
-st.markdown("""
-    <style>
-    /* Main colors */
-    :root {
-        --primary-orange: #FF6B35;
-        --secondary-orange: #FF8C61;
-        --black: #2F2F2F;
-    }
-    
-    /* Custom button styles */
-    .st-key-login button,
-    .st-key-signup button,
-    .st-key-forgot-password button,
-    .st-key-reset-password button,
-    .st-key-back-to-login button {
-        background-color: var(--primary-orange);
-        color: white;
-        border: none;
-        width: 100%;
-        padding: 8px 16px;
-        border-radius: 5px;
-        cursor: pointer;
-        transition: background-color 0.3s ease;
-    }
-    
-    .st-key-login button:hover,
-    .st-key-signup button:hover,
-    .st-key-forgot-password button:hover,
-    .st-key-reset-password button:hover,
-    .st-key-back-to-login button:hover {
-        background-color: var(--secondary-orange);
-    }
-    
-    .title {
-        color: var(--black);
-        text-align: center;
-        margin-bottom: 2rem;
-    }
-    
-    .error-msg {
-        color: red;
-        font-size: 0.9em;
-        margin-top: 0.5em;
-    }
-    
-    .stTextInput > div > div > input {
-        border-radius: 5px;
-        border: 1px solid #ccc;
-    }
-
-    /* Loading spinner for background processes */
-    .stSpinner {
-        text-align: center;
-        margin: 20px 0;
-    }
-    </style>
-""", unsafe_allow_html=True)
+with open('static/login.css', 'r') as f:
+    st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
 class FirebaseAuth:
     def __init__(self):
@@ -286,8 +231,8 @@ def main():
     initialize_session_state()
     
     if st.session_state.user_id is None:
-        st.markdown("<h1 class='title'>ChatBot Assistant</h1>", unsafe_allow_html=True)
-        
+        st.title("DevRag",anchor=False)
+
         # Login Form
         if st.session_state.current_form == 'login':
             st.subheader("Login", anchor=False)
