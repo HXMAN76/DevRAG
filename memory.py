@@ -33,7 +33,7 @@ def manage_conversations(self, user_id, query, response):
         if len(conversations) >= 5:
             # Create summary of conversations
             summary = {
-                'summary_text': self._create_summary(conversations),
+                'summary_text':create_summary(conversations),
                 'timestamp': datetime.now(),
                 'original_conversations': conversations
             }
@@ -54,7 +54,7 @@ def manage_conversations(self, user_id, query, response):
     except Exception as e:
         raise Exception(f"Failed to manage conversations: {str(e)}")
         
-def _create_summary(self, conversations):
+def create_summary(conversations):
     """
     Creates a summary of conversations using Mistral AI
     """
@@ -92,3 +92,10 @@ def _create_summary(self, conversations):
     except Exception as e:
         # Fallback to basic summary if Mistral API fails
         return f"Error creating summary with Mistral: {str(e)}"
+def retrieve_memory(self,user_id):
+    try:
+        user_ref = self.db.collection('user_data').document(user_id)
+        user_doc = user_ref.get()
+        user_data = user_doc.to_dict()
+        conversations = user_data.get('past_conversations', [])
+        summary_conversations = user_data.get('conversation_summary', [])
