@@ -196,13 +196,13 @@ class FirebaseAuth:
         except Exception as e:
             raise Exception(f"Failed to send reset email. {str(e)}")
 
-        def get_user_info(self, user_id):
-            """Get user information from Firestore"""
-            try:
-                user_data = self.db.collection('user_data').document(user_id).get()
-                return user_data.to_dict()
-            except Exception as e:
-                return None
+    def get_user_info(self, user_id):
+        """Get user information from Firestore"""
+        try:
+            user_data = self.db.collection('user_data').document(user_id).get()
+            return user_data.to_dict()
+        except Exception as e:
+            return None
 
 def initialize_session_state():
     if 'current_form' not in st.session_state:
