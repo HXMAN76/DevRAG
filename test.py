@@ -1,10 +1,13 @@
 import os
 import json
 import asyncio
+import threading
+from concurrent.futures import ThreadPoolExecutor
+from functools import wraps
 from dotenv import load_dotenv
-from snowflake.connector.asyncio import AsyncConnection
-from snowflake.core import Root
+import snowflake.connector
 from snowflake.snowpark import Session
+from snowflake.core import Root
 import streamlit as st
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
@@ -18,7 +21,24 @@ from bs4 import BeautifulSoup
 from backend import PDFScraper, TextProcessor
 import tempfile
 from urllib.parse import urljoin
+from typing import Optional
 
+def async_to_sync(coroutine):
+    """Convert an async function to sync for Streamlit"""
+    try:
+        loop = asyncio.get_event_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+    
+    return loop.run_until_complete(coroutine)
+
+def run_async(func):
+    """Decorator to run async functions in Streamlit"""
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        return async_to_sync(func(*args, **kwargs))
+    return wrapper
 
 class SnowflakeManager:
     def __init__(self):
@@ -32,54 +52,84 @@ class SnowflakeManager:
             "warehouse": os.getenv("SNOWFLAKE_WAREHOUSE"),
             "schema": os.getenv("SNOWFLAKE_SCHEMA"),
         }
-        self.session = None
         self.conn = None
         self.cursor = None
+        self.session = None
+        self._lock = threading.Lock()
 
-    async def connect(self):
-        self.conn = await AsyncConnection.connect(**self.connection_params)
-        self.cursor = self.conn.cursor()
-        self.session = Session.builder.configs(self.connection_params).create()
+    def ensure_connection(self):
+        """Ensure connection is established"""
+        with self._lock:
+            if not self.conn:
+                self.conn = snowflake.connector.connect(**self.connection_params)
+                self.cursor = self.conn.cursor()
 
-    async def disconnect(self):
-        if self.cursor:
-            await self.cursor.close()
-        if self.conn:
-            await self.conn.close()
-        if self.session:
-            self.session.close()
+    def ensure_sync_connection(self):
+        """Ensure sync connection is established"""
+        if not self.session:
+            self.session = Session.builder.configs(self.connection_params).create()
+
+    def disconnect(self):
+        """Close all connections"""
+        with self._lock:
+            if self.cursor:
+                self.cursor.close()
+            if self.conn:
+                self.conn.close()
+            if self.session:
+                self.session.close()
+            self.cursor = None
+            self.conn = None
+            self.session = None
 
     async def insert_document(self, web_url: str, content: str):
-        query = "INSERT INTO DEVRAG_SCHEMA.DOCUMENT (WEBSITE_URL, CONTENT) VALUES (%s, %s)"
-        await self.cursor.execute(query, (web_url, content))
-        await self.conn.commit()
+        """Insert document into Snowflake using a separate thread for async-like behavior"""
+        def _insert():
+            try:
+                self.ensure_connection()
+                query = """
+                INSERT INTO DEVRAG_SCHEMA.DOCUMENT (WEBSITE_URL, CONTENT) 
+                VALUES (%s, %s)
+                """
+                self.cursor.execute(query, (web_url, content))
+                self.conn.commit()
+                return True
+            except Exception as e:
+                print(f"Error inserting document: {e}")
+                return False
+
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(None, _insert)
 
     def search_and_generate(self, query: str) -> str:
-        root = Root(self.session)
-        search_service = (
-            root
-            .databases[os.getenv("SNOWFLAKE_DATABASE")]
-            .schemas[os.getenv("SNOWFLAKE_SCHEMA")]
-            .cortex_search_services[os.getenv("SNOWFLAKE_WAREHOUSE")]
-        )
-
-        search_results = search_service.search(
-            query=query,
-            columns=["CONTENT"],
-            limit=5
-        )
-
-        response = json.dumps(search_results.to_dict())
-        generation_query = f"""
-            SELECT SNOWFLAKE.CORTEX.COMPLETE(
-                'mistral-large2',
-                $$You are an intelligent assistant who can answer the user query based on the provided document content and can also provide the relevant information.
-                Document: {response}
-                Query: {query}$$
-            );
-        """
+        """Synchronously search documents and generate response"""
+        self.ensure_sync_connection()
 
         try:
+            root = Root(self.session)
+            search_service = (
+                root
+                .databases[os.getenv("SNOWFLAKE_DATABASE")]
+                .schemas[os.getenv("SNOWFLAKE_SCHEMA")]
+                .cortex_search_services[os.getenv("SNOWFLAKE_WAREHOUSE")]
+            )
+
+            search_results = search_service.search(
+                query=query,
+                columns=["CONTENT"],
+                limit=5
+            )
+
+            response = json.dumps(search_results.to_dict())
+            generation_query = f"""
+                SELECT SNOWFLAKE.CORTEX.COMPLETE(
+                    'mistral-large2',
+                    $$You are an intelligent assistant who can answer the user query based on the provided document content and can also provide the relevant information.
+                    Document: {response}
+                    Query: {query}$$
+                );
+            """
+
             generation = self.session.sql(generation_query).collect()
             return generation[0][0]
         except Exception as e:
@@ -91,14 +141,12 @@ class SeleniumGithubScraper:
         self.setup_driver()
 
     def setup_driver(self):
-        # Configure Chrome options
         chrome_options = Options()
-        chrome_options.add_argument("--headless")  # Run in headless mode
+        chrome_options.add_argument("--headless")
         chrome_options.add_argument("--no-sandbox")
         chrome_options.add_argument("--disable-dev-shm-usage")
         chrome_options.add_argument("--disable-gpu")
         
-        # Setup Chrome driver
         self.driver = webdriver.Chrome(
             service=Service(ChromeDriverManager().install()),
             options=chrome_options
@@ -109,22 +157,16 @@ class SeleniumGithubScraper:
 
     def scrape_github(self):
         try:
-            # Convert URL to gitingest URL
             ingest_url = self.replace_hub_with_ingest(self.url)
-            
-            # Navigate to the page
             self.driver.get(ingest_url)
             
-            # Wait for content to load (5 seconds + waiting for textareas)
             WebDriverWait(self.driver, 10).until(
                 EC.presence_of_all_elements_located((By.TAG_NAME, "textarea"))
             )
             
-            # Extract content from textareas
             textareas = self.driver.find_elements(By.TAG_NAME, "textarea")
             content = [textarea.get_attribute("value") for textarea in textareas if textarea.get_attribute("value")]
             
-            # Process the content
             if content:
                 text_processor = TextProcessor()
                 processed_content = []
@@ -166,11 +208,9 @@ class SimpleWebScraper:
             response.raise_for_status()
             soup = BeautifulSoup(response.text, 'html.parser')
             
-            # Remove unwanted elements
             for element in soup(['script', 'style', 'nav', 'footer', 'header']):
                 element.decompose()
             
-            # Extract text content
             text = ' '.join([p.get_text(strip=True) for p in soup.find_all(['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li'])])
             return text
         except Exception as e:
@@ -181,17 +221,14 @@ class SimpleWebScraper:
         all_text = []
         base_url = self.get_base_url(self.url)
         
-        # Start with the main URL
         main_text = self.scrape_page(self.url)
         if main_text:
             all_text.append(main_text)
 
         try:
-            # Get initial page
             response = requests.get(self.url, headers=self.headers, timeout=10)
             soup = BeautifulSoup(response.text, 'html.parser')
             
-            # Find and process links
             links = soup.find_all('a', href=True)
             pages_scraped = 1
 
@@ -200,7 +237,6 @@ class SimpleWebScraper:
                     break
 
                 href = link['href']
-                # Convert relative URLs to absolute URLs
                 full_url = urljoin(base_url, href)
                 
                 if (self.is_valid_url(full_url) and 
@@ -211,7 +247,6 @@ class SimpleWebScraper:
                         all_text.append(text)
                         pages_scraped += 1
 
-            # Process the combined text
             combined_text = ' '.join(all_text)
             text_processor = TextProcessor()
             return text_processor.chunk_text(combined_text)
@@ -219,13 +254,6 @@ class SimpleWebScraper:
         except Exception as e:
             print(f"Error in scrape: {e}")
             return []
-
-def initialize_session_state():
-    if 'messages' not in st.session_state:
-        st.session_state.messages = []
-    if 'snowflake_manager' not in st.session_state:
-        st.session_state.snowflake_manager = SnowflakeManager()
-        st.session_state.snowflake_manager.connect()
 
 def handle_pdf_upload(pdf_file):
     if pdf_file is not None:
@@ -239,6 +267,12 @@ def handle_pdf_upload(pdf_file):
         os.unlink(tmp_file_path)
         return content
     return None
+
+def initialize_session_state():
+    if 'messages' not in st.session_state:
+        st.session_state.messages = []
+    if 'snowflake_manager' not in st.session_state:
+        st.session_state.snowflake_manager = SnowflakeManager()
 
 def main():
     st.title("RAG Chatbot")
@@ -260,7 +294,6 @@ def main():
             st.session_state.messages.append({"role": "assistant", "content": response})
             st.markdown(response)
     
-    # Create three columns for the buttons
     col1, col2, col3 = st.columns(3)
     
     with col1:
@@ -281,7 +314,7 @@ def main():
             st.session_state.show_website = False
             st.session_state.show_pdf = True
     
-    # Show appropriate input field based on button clicks
+    # GitHub processing
     if st.session_state.get('show_github', False):
         github_url = st.text_input("Enter GitHub URL")
         if github_url:
@@ -289,12 +322,18 @@ def main():
                 scraper = SeleniumGithubScraper(github_url)
                 content = scraper.scrape_github()
                 if content:
+                    success_count = 0
                     for chunk in content:
-                        st.session_state.snowflake_manager.insert_document(github_url, chunk)
-                    st.success("GitHub content processed successfully!")
+                        if async_to_sync(st.session_state.snowflake_manager.insert_document(github_url, chunk)):
+                            success_count += 1
+                    if success_count > 0:
+                        st.success(f"Successfully processed {success_count} chunks of GitHub content!")
+                    else:
+                        st.error("Failed to process GitHub content. Please try again.")
                 else:
                     st.error("Failed to process GitHub content. Please check the URL and try again.")
     
+    # Website processing
     if st.session_state.get('show_website', False):
         website_url = st.text_input("Enter website URL")
         if website_url:
@@ -302,21 +341,32 @@ def main():
                 scraper = SimpleWebScraper(website_url)
                 content = scraper.scrape()
                 if content:
+                    success_count = 0
                     for chunk in content:
-                        st.session_state.snowflake_manager.insert_document(website_url, chunk)
-                    st.success("Website content processed successfully!")
+                        if async_to_sync(st.session_state.snowflake_manager.insert_document(website_url, chunk)):
+                            success_count += 1
+                    if success_count > 0:
+                        st.success(f"Successfully processed {success_count} chunks of website content!")
+                    else:
+                        st.error("Failed to process website content. Please try again.")
                 else:
                     st.error("Failed to process website content. Please check the URL and try again.")
     
+    # PDF processing
     if st.session_state.get('show_pdf', False):
         uploaded_file = st.file_uploader("Choose a PDF file", type="pdf")
         if uploaded_file:
             with st.spinner("Processing PDF..."):
                 content = handle_pdf_upload(uploaded_file)
                 if content:
+                    success_count = 0
                     for chunk in content:
-                        st.session_state.snowflake_manager.insert_document(uploaded_file.name, chunk)
-                    st.success("PDF processed successfully!")
+                        if async_to_sync(st.session_state.snowflake_manager.insert_document(uploaded_file.name, chunk)):
+                            success_count += 1
+                    if success_count > 0:
+                        st.success(f"Successfully processed {success_count} chunks of PDF content!")
+                    else:
+                        st.error("Failed to process PDF. Please try again.")
                 else:
                     st.error("Failed to process PDF. Please check the file and try again.")
 
