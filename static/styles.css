@@ -1,0 +1,160 @@
+* {
+    scroll-behavior: smooth;
+}
+
+.navbar {
+    width: 100%;
+    display: flex;
+    justify-content: right;
+    padding: 10px 0;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 10;
+    background: rgba( 0, 0, 0, 0.05 );
+    box-shadow: 0 8px 32px 0 hsla(18, 94%, 20%, 0.3);
+    backdrop-filter: blur( 13px );
+    border-radius: 10px;
+}
+
+.navbar a {
+    float: left;
+    color: white;
+    text-align: center;
+    padding: 10px 15px;
+    text-decoration: none;
+    font-size: 1.25rem;
+    margin-right: 10px;
+}
+
+.navbar a:hover {
+    border-bottom: 3px solid #ddd;
+    color: orangered;
+    transform: translateY(-7px) scale(1.1);
+    transition: 0.5s ease transform;
+}
+
+#welcome-to-devrag{
+    font-size: 4.5rem;
+    text-align: center;
+    color: white;
+}
+
+ul{
+    color:white;
+}
+
+h3 {
+    display: flex;
+    justify-self: center;
+    max-width: 600px;
+    text-align: center;
+}
+
+#empowering-developers-with-instant-ai-driven-insights-by-combining-retrieval-augmented-generation-and-dynamic-web-scraped-knowledge{
+    color: white;
+    font-weight: lighter;
+    font-size: 1.2rem;
+    margin-bottom: 1rem;
+}
+
+#devrag-is-an-advanced-rag-powered-application-that{
+    justify-self: start;
+}
+
+
+.st-key-get-started button {
+    border-radius: 999px;
+    padding: 1em 2em;
+    background: linear-gradient(117deg, rgb(254, 145, 80), rgb(254, 100, 70));
+    border: none;
+    color: rgb(255, 255, 255);
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: box-shadow 0.25s ease 0s;
+    letter-spacing: 0.08rem;
+    display: flex;
+    justify-self: center;
+}
+
+.st-key-get-started button p{
+    font-size: 1em;
+    font-weight: bold;
+}
+
+.st-key-get-started button:hover,
+.st-key-get-started button:focus {
+    background: linear-gradient(117deg, rgb(248, 137, 73), rgb(248, 82, 49));
+    box-shadow: 0 0.1rem 0.8rem rgb(254, 100, 70);
+}
+
+.st-key-get-started button:active {
+    color: white;
+}
+
+.card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 1rem;
+    border-radius: 10px;
+    background-color: #fff;
+    border-radius: 10px;
+    width: 200px;
+    text-align: center;
+    position: relative;
+}
+
+.card:hover{
+    transition: ease all 0.5s;;
+}
+
+.card:hover .social-media-handles {
+    opacity: 1;
+    transform: translateY(-5px);
+}
+
+.profile-pic{
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+}
+
+.name {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: -6px;
+}
+
+.role {
+    font-size: 18px;
+    font-weight: 500;
+    margin-bottom: 25px;
+}
+
+.social-media-handles {
+    display: flex;
+    justify-content: space-evenly;
+    width: 100%;
+    transition: all 0.5s;
+    opacity: 0;
+}
+
+.fa-github{
+    color: black;
+    font-size: 2rem;
+}
+
+.fa-linkedin{
+    font-size: 2rem;
+}
+
+.fa-envelope{
+    color: red;
+    font-size: 2rem;
+}
+
+.social-media-handles a:hover {
+    transform: translateY(-5px) scale(1.15);
+    transition: ease all 0.5s;
+}

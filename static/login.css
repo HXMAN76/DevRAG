@@ -1,0 +1,80 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap');
+
+/* Custom button styles */
+.st-key-forgot-password button,
+.st-key-new-user button,
+.st-key-back-to-login button {
+    background-color: #FF6B35;
+    color: white;
+    border: none;
+    width: 100%;
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 2px 4px rgba(255, 107, 53, 0.2);
+}
+
+.st-key-forgot-password button p,
+.st-key-new-user button p,
+.st-key-back-to-login button p{
+    font-weight: 600;
+}
+
+.st-key-new-user button:hover,
+.st-key-forgot-password button:hover,
+.st-key-back-to-login button:hover {
+    background-color: hsl(16, 100%, 55%);
+    color: white;
+    transform: translateY(-4px);
+    box-shadow: 0 4px 8px rgba(255, 107, 53, 0.3);
+}
+
+.st-key-new-user button:active,
+.st-key-forgot-password button:active,
+.st-key-back-to-login button:active {
+    background-color: hsl(16, 100%, 40%);
+    color: white;
+    transform: scale(0.95);
+}
+
+[data-testid = "stBaseButton-secondaryFormSubmit"]{
+    background-color: #FF6B35;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    font-weight: 600;
+    box-shadow: 0 2px 4px rgba(255, 107, 53, 0.2);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+[data-testid = "stBaseButton-secondaryFormSubmit"]:hover{
+    background-color: hsl(16, 100%, 55%);
+    color: white;
+    transform: scale(1.1);
+    box-shadow: 0 4px 8px rgba(255, 107, 53, 0.3);
+}
+
+[data-testid = "stBaseButton-secondaryFormSubmit"]:active{
+    background-color: hsl(16, 100%, 40%);
+    color: white;
+    transform: scale(0.95);
+}
+
+#devrag{
+    font-family: Montserrat;
+    color: #FF6B35;
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.stTextInput > div > div > input {
+    border-radius: 5px;
+    border: 1px solid #ccc;
+}
+
+/* Loading spinner for background processes */
+.stSpinner {
+    text-align: center;
+    margin: 20px 0;
+}
