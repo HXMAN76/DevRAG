@@ -93,9 +93,11 @@ def create_summary(conversations):
         # Fallback to basic summary if Mistral API fails
         return f"Error creating summary with Mistral: {str(e)}"
 def retrieve_memory(self,user_id):
-    try:
         user_ref = self.db.collection('user_data').document(user_id)
         user_doc = user_ref.get()
         user_data = user_doc.to_dict()
         conversations = user_data.get('past_conversations', [])
         summary_conversations = user_data.get('conversation_summary', [])
+        if summary_conversations:
+            conversations.append(summary_conversations[0])
+        return conversations
