@@ -224,22 +224,40 @@ class FirebaseAuth:
             raise Exception("Registration failed. Please try again.")
 
     def reset_password(self, email):
-        """Send password reset email"""
-        try:
-            # Generate password reset link
-            link = auth.generate_password_reset_link(email)
-            # In production, you'd send this link via email
-            print(f"Password reset link: {link}")
-        except Exception as e:
-            raise Exception("Failed to send reset email. Please check your email address.")
 
-    def get_user_info(self, user_id):
-        """Get user information from Firestore"""
+        """Send password reset email using Firebase Authentication REST API"""
         try:
-            user_data = self.db.collection('user_data').document(user_id).get()
-            return user_data.to_dict()
+            # Firebase Auth REST API endpoint for password reset
+            reset_password_url = f"https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key={self.api_key}"
+            
+            # Request payload
+            payload = {
+                "requestType": "PASSWORD_RESET",
+                "email": email
+            }
+            
+            # Send the request to Firebase
+            response = requests.post(reset_password_url, json=payload)
+            data = response.json()
+            
+            # Check if the request was successful
+            if response.status_code == 200:
+                print(f"Password reset email sent to {email}")
+            else:
+                error_message = data.get('error', {}).get('message', 'Failed to send reset email')
+                raise Exception(error_message)
+        except requests.exceptions.RequestException:
+            raise Exception("Network error. Please check your connection.")
         except Exception as e:
-            return None
+            raise Exception(f"Failed to send reset email. {str(e)}")
+
+        def get_user_info(self, user_id):
+            """Get user information from Firestore"""
+            try:
+                user_data = self.db.collection('user_data').document(user_id).get()
+                return user_data.to_dict()
+            except Exception as e:
+                return None
 
 def initialize_session_state():
     if 'current_form' not in st.session_state:
