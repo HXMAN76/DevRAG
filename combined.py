@@ -117,13 +117,9 @@ class FirebaseAuth:
             # Check for errors
             if response.status_code != 200:
                 error_message = data.get('error', {}).get('message', 'Authentication failed')
-                if error_message == 'INVALID_PASSWORD':
-                    raise Exception("Invalid password")
-                elif error_message == 'EMAIL_NOT_FOUND':
-                    raise Exception("Email not found")
-                else:
-                    raise Exception("Login failed. Please try again.")
-            
+                if error_message:
+                    raise Exception("Login Failed. Check the Credential")
+
             # Get the user ID from the response
             user_id = data.get('localId')
             if not user_id:
