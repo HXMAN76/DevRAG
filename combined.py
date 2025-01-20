@@ -9,6 +9,9 @@ import snowflake.connector
 import threading
 import requests
 import json
+import toml
+with open('secrets.toml','r') as file:
+    secret = toml.load(file)
 
 # Configure Streamlit page
 st.set_page_config(page_title="Login", layout="centered")
@@ -25,32 +28,32 @@ class FirebaseAuth:
         # Initialize Firebase Admin SDK if not already initialized
         if not firebase_admin._apps:
             self.firebase_credentials = {
-                "type": os.getenv("FIREBASE_TYPE"),
-                "project_id": os.getenv("FIREBASE_PROJECT_ID"),
-                "private_key_id": os.getenv("FIREBASE_PRIVATE_KEY_ID"),
-                "private_key": os.getenv("FIREBASE_PRIVATE_KEY").replace('\\n', '\n'),
-                "client_email": os.getenv("FIREBASE_CLIENT_EMAIL"),
-                "client_id": os.getenv("FIREBASE_CLIENT_ID"),
-                "auth_uri": os.getenv("FIREBASE_AUTH_URI"),
-                "token_uri": os.getenv("FIREBASE_TOKEN_URI"),
-                "auth_provider_x509_cert_url": os.getenv("FIREBASE_AUTH_PROVIDER_X509_CERT_URL"),
-                "client_x509_cert_url": os.getenv("FIREBASE_CLIENT_X509_CERT_URL"),
-                "universe_domain": os.getenv("FIREBASE_UNIVERSE_DOMAIN")
+                "type": secret["FIREBASE"]["TYPE"],
+                "project_id": secret["FIREBASE"]["PROJECT_ID"],
+                "private_key_id": secret["FIREBASE"]["PRIVATE_KEY_ID"],
+                "private_key": secret["FIREBASE"]["PRIVATE_KEY"].replace('\\n', '\n'),
+                "client_email": secret["FIREBASE"]["CLIENT_EMAIL"],
+                "client_id": secret["FIREBASE"]["CLIENT_ID"],
+                "auth_uri": secret["FIREBASE"]["AUTH_URI"],
+                "token_uri": secret["FIREBASE"]["TOKEN_URI"],
+                "auth_provider_x509_cert_url": secret["FIREBASE"]["AUTH_PROVIDER_X509_CERT_URL"],
+                "client_x509_cert_url": ["FIREBASE"]["CLIENT_X509_CERT_URL"],
+                "universe_domain": secret["FIREBASE"]["UNIVERSE_DOMAIN"]
             }
             cred = credentials.Certificate(self.firebase_credentials)
             firebase_admin.initialize_app(cred)
         
         self.db = firestore.client()
-        self.api_key = os.getenv("FIREBASE_API_KEY")
+        self.api_key = secret["FIREBASE"]["API_KEY"]
     def _get_snowflake_connection(self):
         """Create and return a Snowflake connection"""
         return snowflake.connector.connect(
-            user=os.getenv("SNOWFLAKE_USER"),
-            password=os.getenv("SNOWFLAKE_PASSWORD"),
-            account=os.getenv("SNOWFLAKE_ACCOUNT"),
-            database=os.getenv("SNOWFLAKE_DATABASE"),
-            schema=os.getenv("SNOWFLAKE_SCHEMA"),
-            warehouse=os.getenv("SNOWFLAKE_WAREHOUSE")
+            user=secret["SNOWFLAKE"]["USER"],
+            password=secret["SNOWFLAKE"]["PASSWORD"],
+            account=secret['SNOWFLAKE']['ACCOUNT'],
+            database=secret["SNOWFLAKE"]["DATABASE"],
+            schema=secret["SNOWFLAKE"]["SCHEMA"],
+            warehouse=secret["SNOWFLAKE"]["WAREHOUSE"]
         )
 
     def _setup_snowflake_resources(self, user_id):
@@ -74,7 +77,7 @@ class FirebaseAuth:
                 create_search_query = f"""
                     CREATE OR REPLACE CORTEX SEARCH SERVICE {user_id}_{service}search
                     ON content
-                    WAREHOUSE = '{os.getenv("SNOWFLAKE_WAREHOUSE")}'
+                    WAREHOUSE = '{secret["SNOWFLAKE"]["WAREHOUSE"]}'
                     TARGET_LAG = '1 minutes'
                     EMBEDDING_MODEL = 'snowflake-arctic-embed-l-v2.0'
                     AS (
