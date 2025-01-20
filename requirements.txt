@@ -16,3 +16,4 @@ beautifulsoup4
 selenium 
 webdriver-manager
 mistralai
+toml
