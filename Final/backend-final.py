@@ -241,12 +241,7 @@ class SnowflakeManager:
         self.session = None
         self.conn = None
         self.cursor = None
-    
-    def get_uid(self):
-        # returns data from auth page
-        pass
-    def set_uid(self, uid):
-        self.uid = uid
+        self.uid = None
         
     def connect(self):
         self.conn = snowflake.connector.connect(**self.connection_params)
@@ -261,18 +256,18 @@ class SnowflakeManager:
         if self.session:
             self.session.close()
 
-    def insert_data(self,data,source,user_id):
+    def insert_data(self,data,source):
         # inserts data into the database
         if source.casefold() == 'Github':
-            insert_query = f"""INSERT INTO {user_id}_github (content) VALUES {data}"""
+            insert_query = f"""INSERT INTO {self.uid}_github (content) VALUES {data}"""
             self.cursor.execute(insert_query)
             self.conn.commit()
         elif source.casefold() == 'Web':
-            insert_query = f"""INSERT INTO {user_id}_rag (content) VALUES {data}"""
+            insert_query = f"""INSERT INTO {self.uid}_rag (content) VALUES {data}"""
             self.cursor.execute(insert_query)
             self.conn.commit()
         elif source.casefold() == 'PDF':
-            insert_query = f"""INSERT INTO {user_id}_pdf (content) VALUES {data}"""
+            insert_query = f"""INSERT INTO {self.uid}_pdf (content) VALUES {data}"""
             self.cursor.execute(insert_query)
             self.conn.commit()
 
@@ -372,7 +367,10 @@ class SnowflakeManager:
                         - **User Query**:  
                                 "What are webhook configurations, and how do they work?"  
                     **Example Output**:  
-                                "Webhook configurations are settings that allow your application to receive real-time updates from the payment API when specific events occur (e.g., successful payments, refunds). Configure the webhook URL in your API dashboard, ensure it points to an accessible endpoint, and validate incoming requests using the signature provided in the header to ensure authenticity."$$
+                                "Webhook configurations are settings that allow your application to receive real-time updates from the payment API when specific events occur (e.g., successful payments, refunds). Configure the webhook URL in your API dashboard, ensure it points to an accessible endpoint, and validate incoming requests using the signature provided in the header to ensure authenticity."$$,
+                {
+                    'temperature': 0.42
+                }
             );"""
 
         generation = self.session.sql(instruction).collect()
@@ -506,6 +504,7 @@ class Backend:
     def __init__(self):
         self.config = ConfigManager.load_config()
         self.text_processor = TextProcessor()
+        self.snowflake_manager = SnowflakeManager()
 
     async def webcrawler(self):
         """Main Webcrawler processing method"""

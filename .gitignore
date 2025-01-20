@@ -127,6 +127,7 @@ celerybeat.pid
 
 # Environments
 .env
+*.toml
 .venv
 env/
 venv/
@@ -167,4 +168,4 @@ cython_debug/
 
 %USERPROFILE%
 myenv
-.toml
+
