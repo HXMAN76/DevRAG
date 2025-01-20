@@ -8,7 +8,7 @@ from datetime import datetime
 import snowflake.connector
 import threading
 import requests
-import json
+import time
 
 # Configure Streamlit page
 st.set_page_config(page_title="Login", layout="centered")
@@ -245,8 +245,10 @@ def main():
                     else:
                         try:
                             user_id = st.session_state.auth.login_user(email, password)
+
                             st.session_state.user_id = user_id
                             st.success("Login successful!")
+                            time.sleep(2)
                             st.rerun()
                         except Exception as e:
                             st.error(str(e))
@@ -263,14 +265,15 @@ def main():
         
         # Signup Form
         elif st.session_state.current_form == 'signup':
-            st.subheader("Sign Up", anchor=False)
+            st.subheader("🌟 Ready to supercharge your development?",anchor=False)
+            st.markdown("Sign up now to get full access to DevRag and boost your coding productivity!")
             with st.form("signup_form"):
                 name = st.text_input("Full Name")
                 email = st.text_input("Email")
                 password = st.text_input("Password", type="password")
-                occupation = st.text_input("Occupation")
-                purpose = st.selectbox("Purpose of Use", 
-                                     ["Personal", "Business", "Education", "Research", "Other"])
+                occupation = st.selectbox("Occupation", 
+                    ["Student", "Software Developer", "Data Scientist", "Researcher", 
+                     "Teacher/Professor", "Business Professional", "Other"])
                 description = st.text_area("Description")
                 submit = st.form_submit_button("Sign Up")
                 
@@ -287,12 +290,12 @@ def main():
                             additional_data = {
                                 "name": name,
                                 "occupation": occupation,
-                                "purpose": purpose,
                                 "description": description
                             }
                             user_id = st.session_state.auth.register_user(email, password, additional_data)
                             st.success("Registration successful! Snowflake resources are being set up in the background.")
                             st.info("You can proceed to login while we complete the setup.")
+                            time.sleep(2)
                             st.session_state.current_form = 'login'
                             st.rerun()
                         except Exception as e:
@@ -318,6 +321,7 @@ def main():
                         try:
                             st.session_state.auth.reset_password(email)
                             st.success("Password reset link sent to your email!")
+                            time.sleep(2)
                             st.session_state.current_form = 'login'
                             st.rerun()
                         except Exception as e:
@@ -335,12 +339,14 @@ def main():
             st.write(f"Name: {user_info.get('name', 'N/A')}")
             st.write(f"Email: {user_info.get('email', 'N/A')}")
             st.write(f"Occupation: {user_info.get('occupation', 'N/A')}")
-            st.write(f"Purpose: {user_info.get('purpose', 'N/A')}")
         
         if st.button("Logout"):
             st.session_state.user_id = None
             st.session_state.current_form = 'login'
             st.rerun()
+
+def get_user_id():
+    return st.session_state.user_id
 
 if __name__ == "__main__":
     main()

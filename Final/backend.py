@@ -17,6 +17,7 @@ from mistralai import Mistral
 from crawl4ai import AsyncWebCrawler
 import logging
 from bs4 import BeautifulSoup
+from ..combined import get_user_id
 from collections import deque
 logging.basicConfig(level=logging.INFO)
 # Set logging level to WARNING to suppress unwanted info logs
@@ -209,12 +210,7 @@ class SnowflakeManager:
         self.session = None
         self.conn = None
         self.cursor = None
-    
-    def get_uid(self):
-        # returns data from auth page
-        pass
-    def set_uid(self, uid):
-        self.uid = uid
+        self.uid = get_user_id()
         
     def connect(self):
         self.conn = snowflake.connector.connect(**self.connection_params)
