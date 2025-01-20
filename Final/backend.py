@@ -4,6 +4,12 @@
 # DATABASE
 # Github_Scraper
 # Memory
+import firebase_admin
+from firebase_admin import credentials, auth, firestore
+import os
+from dotenv import load_dotenv
+from mistral import Mistral
+import json
 
 class Github_Scraper:
     def __init__(self):
@@ -100,8 +106,127 @@ class SnowflakeManager:
 
 class Memory:
     def __init__(self):
-        pass
-
+        # Load environment variables
+        load_dotenv()
+        
+        # Initialize Firebase Admin SDK if not already initialized
+        if not firebase_admin._apps:
+            self.firebase_credentials = {
+                "type": os.getenv("FIREBASE_TYPE"),
+                "project_id": os.getenv("FIREBASE_PROJECT_ID"),
+                "private_key_id": os.getenv("FIREBASE_PRIVATE_KEY_ID"),
+                "private_key": os.getenv("FIREBASE_PRIVATE_KEY").replace('\\n', '\n'),
+                "client_email": os.getenv("FIREBASE_CLIENT_EMAIL"),
+                "client_id": os.getenv("FIREBASE_CLIENT_ID"),
+                "auth_uri": os.getenv("FIREBASE_AUTH_URI"),
+                "token_uri": os.getenv("FIREBASE_TOKEN_URI"),
+                "auth_provider_x509_cert_url": os.getenv("FIREBASE_AUTH_PROVIDER_X509_CERT_URL"),
+                "client_x509_cert_url": os.getenv("FIREBASE_CLIENT_X509_CERT_URL"),
+                "universe_domain": os.getenv("FIREBASE_UNIVERSE_DOMAIN")
+            }
+            cred = credentials.Certificate(self.firebase_credentials)
+            firebase_admin.initialize_app(cred)
+        
+        self.db = firestore.client()
+        self.api_key = os.getenv("FIREBASE_API_KEY") 
+    
+    def create_summary(conversations):
+        """
+        Creates a summary of conversations using Mistral AI
+        """
+        try:
+            api = os.getenv('SUMMARIZER')
+            if not api:
+                raise ValueError("SUMMARIZER API key not found in environment variables")
+                
+            # Format conversations for Mistral
+            formatted_conversations = []
+            for conv in conversations:
+                formatted_conversations.append(f"User: {conv['query']}\nAssistant: {conv['response']}")
+            
+            conversation_text = "\n\n".join(formatted_conversations)
+            
+            client = Mistral(api_key=api)  # Corrected parameter name
+            
+            chat = client.chat.completions.create(  # Corrected method name
+                model="mistral-large-v2",  # Corrected model name
+                messages=[
+                    {
+                        "role": "system",
+                        "content": "Please summarize the following conversations into a concise paragraph that captures the main topics discussed and key points from both the user's queries and the assistant's responses."
+                    },
+                    {
+                        "role": "user",
+                        "content": conversation_text
+                    }
+                ],
+                temperature=0.5
+            )
+            
+            return chat.choices[0].message.content
+            
+        except Exception as e:
+            # Fallback to basic summary if Mistral API fails
+            return f"Error creating summary with Mistral: {str(e)}"
+    
+    def manage_conversations(self, user_id, query, response):
+        """
+        Manages conversations by:
+        1. Adding new conversation
+        2. Checking if there are 5 conversations
+        3. If yes, summarizes them using Mistral AI
+        4. Clears the conversations list
+        """
+        try:
+            # Get user document reference
+            user_ref = self.db.collection('user_data').document(user_id)
+            user_doc = user_ref.get()
+            user_data = user_doc.to_dict()
+            
+            # Add new conversation
+            conversation = {
+                'query': query,
+                'response': response
+            }
+            
+            # Get current conversations
+            conversations = user_data.get('past_conversations', [])
+            conversations.append(conversation)
+            
+            # Check if we've reached 5 conversations
+            if len(conversations) >= 5:
+                # Create summary of conversations
+                summary = {
+                    'summary_text':self.create_summary(conversations),
+                    'original_conversations': conversations
+                }
+                
+                # Update document with summary and clear conversations
+                user_ref.update({
+                    'conversation_summary': firestore.ArrayUnion([summary]),
+                    'past_conversations': [] # Clear the conversations list
+                })
+            else:
+                # Just update with new conversation
+                user_ref.update({
+                    'past_conversations': conversations
+                })
+                
+            return True
+            
+        except Exception as e:
+            raise Exception(f"Failed to manage conversations: {str(e)}")
+        
+    def retrieve_memory(self,user_id):
+        user_ref = self.db.collection('user_data').document(user_id)
+        user_doc = user_ref.get()
+        user_data = user_doc.to_dict()
+        conversations = user_data.get('past_conversations', [])
+        summary_conversations = user_data.get('conversation_summary', [])
+        if summary_conversations:
+            conversations.append(summary_conversations[0])
+        return conversations
+        
 class LLMcalls:
     def __init__(self):
         pass
