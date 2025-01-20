@@ -130,9 +130,9 @@ def create_team_section():
         <p class="name">Raghav</p>
         <p class="role">Frontend Developer</p>
         <div class="social-media-handles">
-            <a href="#"><i class="fa-brands fa-linkedin"></i></a>
-            <a href="#"><i class="fa-brands fa-github"></i></a>
-            <a href="#"><i class="fa-regular fa-envelope"></i></a>
+            <a href="https://www.linkedin.com/in/raghav--n/"><i class="fa-brands fa-linkedin"></i></a>
+            <a href="https://github.com/Rag-795"><i class="fa-brands fa-github"></i></a>
+            <a href="mailto:balaji.saragesh@gmail.com"><i class="fa-regular fa-envelope"></i></a>
         </div>
     </div>""" , unsafe_allow_html=True)
 
@@ -142,9 +142,9 @@ def create_team_section():
         <p class="name">Dev Bala Saragesh</p>
         <p class="role">Backend Developer</p>
         <div class="social-media-handles">
-            <a href="#"><i class="fa-brands fa-linkedin"></i></a>
-            <a href="#"><i class="fa-brands fa-github"></i></a>
-            <a href="#"><i class="fa-regular fa-envelope"></i></a>
+            <a href="https://www.linkedin.com/in/devbalasarageshbs/"><i class="fa-brands fa-linkedin"></i></a>
+            <a href="https://github.com/dbsaragesh-bs"><i class="fa-brands fa-github"></i></a>
+            <a href="mailto:balaji.saragesh@gmail.com"><i class="fa-regular fa-envelope"></i></a>
         </div>
     </div>""" , unsafe_allow_html=True)
 
@@ -154,9 +154,9 @@ def create_team_section():
         <p class="name">Hari Heman</p>
         <p class="role">Backend Developer</p>
         <div class="social-media-handles">
-            <a href="#"><i class="fa-brands fa-linkedin"></i></a>
-            <a href="#"><i class="fa-brands fa-github"></i></a>
-            <a href="#"><i class="fa-regular fa-envelope"></i></a>
+            <a href="https://www.linkedin.com/in/hari-heman/"><i class="fa-brands fa-linkedin"></i></a>
+            <a href="https://github.com/HXMAN76"><i class="fa-brands fa-github"></i></a>
+            <a href="mailto:hariheman76@gmail.com"><i class="fa-regular fa-envelope"></i></a>
         </div>
     </div>""" , unsafe_allow_html=True)
 
@@ -166,9 +166,9 @@ def create_team_section():
         <p class="name">SriRanjana</p>
         <p class="role">Backend Developer</p>
         <div class="social-media-handles">
-            <a href="#"><i class="fa-brands fa-linkedin"></i></a>
-            <a href="#"><i class="fa-brands fa-github"></i></a>
-            <a href="#"><i class="fa-regular fa-envelope"></i></a>
+            <a href="https://www.linkedin.com/in/sriranjana-chitraboopathy-50b88828a/"><i class="fa-brands fa-linkedin"></i></a>
+            <a href="https://github.com/sriranjanac"><i class="fa-brands fa-github"></i></a>
+            <a href="mailto:sriranjanac@gmail.com"><i class="fa-regular fa-envelope"></i></a>
         </div>
     </div>""" , unsafe_allow_html=True)
 

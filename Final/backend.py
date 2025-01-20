@@ -17,13 +17,18 @@ from mistralai import Mistral
 from crawl4ai import AsyncWebCrawler
 import logging
 from bs4 import BeautifulSoup
+from ..combined import get_user_id
 from collections import deque
 logging.basicConfig(level=logging.INFO)
+from concurrent.futures import ThreadPoolExecutor, as_completed
+import toml
 # Set logging level to WARNING to suppress unwanted info logs
 logging.getLogger("snowflake.connector").setLevel(logging.WARNING)
 logging.getLogger("snowflake.snowpark").setLevel(logging.WARNING)
 logging.getLogger("snowflake.core").setLevel(logging.WARNING)
 
+with open('secrets.toml','r') as file:
+    secret = toml.load(file)
 
 class GithubScraper:
     def __init__(self, url: str):
@@ -198,23 +203,18 @@ class SnowflakeManager:
         self.uid = None
         load_dotenv()
         self.connection_params = {
-            "account": os.getenv("SNOWFLAKE_ACCOUNT"),
-            "user": os.getenv("SNOWFLAKE_USER"),
-            "password": os.getenv("SNOWFLAKE_PASSWORD"),
+            "account": secret['SNOWFLAKE']['ACCOUNT'],
+            "user": secret["SNOWFLAKE"]["USER"],
+            "password": secret["SNOWFLAKE"]["PASSWORD"],
             "role": "ACCOUNTADMIN",
-            "database": os.getenv("SNOWFLAKE_DATABASE"),
-            "warehouse": os.getenv("SNOWFLAKE_WAREHOUSE"),
-            "schema": os.getenv("SNOWFLAKE_SCHEMA"),
+            "database": secret["SNOWFLAKE"]["DATABASE"],
+            "warehouse": secret["SNOWFLAKE"]["WAREHOUSE"],
+            "schema":secret["SNOWFLAKE"]["SCHEMA"]
         }
         self.session = None
         self.conn = None
         self.cursor = None
-    
-    def get_uid(self):
-        # returns data from auth page
-        pass
-    def set_uid(self, uid):
-        self.uid = uid
+        self.uid = get_user_id()
         
     def connect(self):
         self.conn = snowflake.connector.connect(**self.connection_params)
@@ -229,77 +229,72 @@ class SnowflakeManager:
         if self.session:
             self.session.close()
 
-    def insert_data(self,data,source,user_id):
-        # inserts data into the database
-        if source.casefold() == 'Github':
-            insert_query = f"""INSERT INTO {user_id}_github (content) VALUES {data}"""
-            self.cursor.execute(insert_query)
+    def _insert(self, table_name, contents):
+        if contents:
+            insert_queries = [f"INSERT INTO {table_name} (content) VALUES ('{content}')" for content in contents]
+            for query in insert_queries:
+                self.cursor.execute(query)
             self.conn.commit()
-        elif source.casefold() == 'Web':
-            insert_query = f"""INSERT INTO {user_id}_rag (content) VALUES {data}"""
-            self.cursor.execute(insert_query)
-            self.conn.commit()
-        elif source.casefold() == 'PDF':
-            insert_query = f"""INSERT INTO {user_id}_pdf (content) VALUES {data}"""
-            self.cursor.execute(insert_query)
-            self.conn.commit()
-
-    def search(self,user_id, query):
-        root = Root(self.session)
-        # Search in the common search service
-        common_search_service = (
-            root
-            .databases[os.getenv("SNOWFLAKE_DATABASE")]
-            .schemas[os.getenv("SNOWFLAKE_SCHEMA")]
-            .cortex_search_services[os.getenv("SNOWFLAKE_WAREHOUSE")]
-        )
-        common_search_results = common_search_service.search(
-            query=query,
-            columns=["CONTENT"],
-            limit=5
-        )
-        common_response = json.dumps(common_search_results.to_dict())
-        # Search in the personal search service
-        personal_search_service = (
-            root
-            .databases[os.getenv("SNOWFLAKE_DATABASE")]
-            .schemas[os.getenv("SNOWFLAKE_SCHEMA")]
-            .cortex_search_services[f"{user_id}_ragsearch"]
-        )
-        personal_search_results = personal_search_service.search(
-            query=query,
-            columns=["CONTENT"],
-            limit=5
-        )
-        personal_response = json.dumps(personal_search_results.to_dict())
-        # Search in the github search service
-        github_search_service = (
-            root
-            .databases[os.getenv("SNOWFLAKE_DATABASE")]
-            .schemas[os.getenv("SNOWFLAKE_SCHEMA")]
-            .cortex_search_services[f"{user_id}_githubsearch"]
-        )
-        github_search_results = github_search_service.search(
-            query=query,
-            columns=["CONTENT"],
-            limit=5
-        )
-        github_response = json.dumps(github_search_results.to_dict())
-        # Search in the pdf search service
-        pdf_search_service = (
-            root
-            .databases[os.getenv("SNOWFLAKE_DATABASE")]
-            .schemas[os.getenv("SNOWFLAKE_SCHEMA")]
-            .cortex_search_services[f"{user_id}_pdfsearch"]
-        )
-        pdf_search_results = pdf_search_service.search(
-            query=query,
-            columns=["CONTENT"],
-            limit=5
-        )
-        pdf_response = json.dumps(pdf_search_results.to_dict())
-        return [common_response,personal_response,github_response, pdf_response]
     
+    def insert_into_github_rag(self, user_id, contents):
+        with ThreadPoolExecutor() as executor:
+            futures = {executor.submit(self._insert, f"{user_id}_github", contents): user_id}
+            for future in as_completed(futures):
+                try:
+                    future.result()  # This will raise an exception if the insert failed
+                except Exception as e:
+                    print(f"Error inserting into {user_id}_github: {e}")
+
+    def insert_into_personal_rag(self, user_id, contents):
+        with ThreadPoolExecutor() as executor:
+            futures = {executor.submit(self._insert, f"{user_id}_rag", contents): user_id}
+            for future in as_completed(futures):
+                try:
+                    future.result()
+                except Exception as e:
+                    print(f"Error inserting into {user_id}_rag: {e}")
+
+    def insert_into_pdf_rag(self, user_id, contents):
+        with ThreadPoolExecutor() as executor:
+            futures = {executor.submit(self._insert, f"{user_id}_pdf", contents): user_id}
+            for future in as_completed(futures):
+                try:
+                    future.result()
+                except Exception as e:
+                    print(f"Error inserting into {user_id}_pdf: {e}")
+
+    def _search_service(self, user_id, service_name, query):
+        root = Root(self.session)
+        search_service = (
+            root.databases[secret["SNOWFLAKE"]["DATABASE"]]
+                .schemas[secret["SNOWFLAKE"]["SCHEMA"]]
+                .cortex_search_services[service_name]
+        )
+        search_results = search_service.search(query=query, columns=["CONTENT"], limit=5)
+        return json.dumps(search_results.to_dict())
+
+    def search(self, user_id, query: str) -> list:
+        services = {
+            "common": secret["SNOWFLAKE"]["WAREHOUSE"],
+            "personal": f"{user_id}_ragsearch",
+            "github": f"{user_id}_githubsearch",
+            "pdf": f"{user_id}_pdfsearch"
+        }
+
+        results = []
+        
+        with ThreadPoolExecutor() as executor:
+            futures = {executor.submit(self._search_service, user_id, service_name, query): name for name, service_name in services.items()}
+            
+            for future in as_completed(futures):
+                service_name = futures[future]
+                try:
+                    results.append(future.result())
+                except Exception as e:
+                    print(f"Error searching in {service_name}: {e}")
+
+        return results
+
     def generate(self, query,user_id):
         document_details = self.search(query)
         conversation_memory = Memory().retrieve_memory(user_id)
@@ -340,7 +335,10 @@ class SnowflakeManager:
                         - **User Query**:  
                                 "What are webhook configurations, and how do they work?"  
                     **Example Output**:  
-                                "Webhook configurations are settings that allow your application to receive real-time updates from the payment API when specific events occur (e.g., successful payments, refunds). Configure the webhook URL in your API dashboard, ensure it points to an accessible endpoint, and validate incoming requests using the signature provided in the header to ensure authenticity."$$
+                                "Webhook configurations are settings that allow your application to receive real-time updates from the payment API when specific events occur (e.g., successful payments, refunds). Configure the webhook URL in your API dashboard, ensure it points to an accessible endpoint, and validate incoming requests using the signature provided in the header to ensure authenticity."$$,
+                {
+                    'temperature': 0.42
+                }
             );"""
 
         generation = self.session.sql(instruction).collect()
@@ -354,30 +352,30 @@ class Memory:
         # Initialize Firebase Admin SDK if not already initialized
         if not firebase_admin._apps:
             self.firebase_credentials = {
-                "type": os.getenv("FIREBASE_TYPE"),
-                "project_id": os.getenv("FIREBASE_PROJECT_ID"),
-                "private_key_id": os.getenv("FIREBASE_PRIVATE_KEY_ID"),
-                "private_key": os.getenv("FIREBASE_PRIVATE_KEY").replace('\\n', '\n'),
-                "client_email": os.getenv("FIREBASE_CLIENT_EMAIL"),
-                "client_id": os.getenv("FIREBASE_CLIENT_ID"),
-                "auth_uri": os.getenv("FIREBASE_AUTH_URI"),
-                "token_uri": os.getenv("FIREBASE_TOKEN_URI"),
-                "auth_provider_x509_cert_url": os.getenv("FIREBASE_AUTH_PROVIDER_X509_CERT_URL"),
-                "client_x509_cert_url": os.getenv("FIREBASE_CLIENT_X509_CERT_URL"),
-                "universe_domain": os.getenv("FIREBASE_UNIVERSE_DOMAIN")
+                "type": secret["FIREBASE"]["TYPE"],
+                "project_id": secret["FIREBASE"]["PROJECT_ID"],
+                "private_key_id": secret["FIREBASE"]["PRIVATE_KEY_ID"],
+                "private_key": secret["FIREBASE"]["PRIVATE_KEY"].replace('\\n', '\n'),
+                "client_email": secret["FIREBASE"]["CLIENT_EMAIL"],
+                "client_id": secret["FIREBASE"]["CLIENT_ID"],
+                "auth_uri": secret["FIREBASE"]["AUTH_URI"],
+                "token_uri": secret["FIREBASE"]["TOKEN_URI"],
+                "auth_provider_x509_cert_url": secret["FIREBASE"]["AUTH_PROVIDER_X509_CERT_URL"],
+                "client_x509_cert_url": ["FIREBASE"]["CLIENT_X509_CERT_URL"],
+                "universe_domain": secret["FIREBASE"]["UNIVERSE_DOMAIN"]
             }
             cred = credentials.Certificate(self.firebase_credentials)
             firebase_admin.initialize_app(cred)
         
         self.db = firestore.client()
-        self.api_key = os.getenv("FIREBASE_API_KEY") 
+        self.api_key = secret["FIREBASE"]["API_KEY"]
     
     def create_summary(conversations):
         """
         Creates a summary of conversations using Mistral AI
         """
         try:
-            api = os.getenv('SUMMARIZER')
+            api = secret["MISTRAL"]["API_KEY"]
             if not api:
                 raise ValueError("SUMMARIZER API key not found in environment variables")
                 
@@ -487,6 +485,13 @@ class Backend:
         # data = await scraper.scrape()
         # print(data)
         
+        #github scraping 
+        # url = input("Enter url for github scraping:")
+        # github_scraper = GithubScraper(url)
+        # data = await github_scraper.get_data()
+        # print(self.chunker.chunk_text(data))
+        pass
+    
 if __name__ == '__main__':
     backend = Backend()
     asyncio.run(backend.main())
