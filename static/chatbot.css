@@ -1,0 +1,51 @@
+#user{
+    color: #FF6B35;
+    font-family: Montserrat;
+}
+
+#user::before{
+    content: "Welcome ";
+    color: black;
+}
+
+/* .st-key-chat_input{
+    position: fixed;
+    bottom: 15px;
+} */
+
+.st-key-web button,.st-key-github button,.st-key-pdf button{
+    width: 50px;
+}
+
+.st-key-web button:hover,.st-key-github button:hover,.st-key-pdf button:hover{
+    transform: scale(1.1);
+    border: 2px solid #FF6B35;
+    transition: ease all 0.3s;
+}
+
+/* User message Styles */
+.st-emotion-cache-1c7y2kd{
+    background-color: hsl(31, 100%, 90%);
+    border-top-left-radius: 40px;
+    border-bottom-left-radius: 40px;
+    margin-left: 2rem;
+}
+
+.st-emotion-cache-1c7y2kd p{
+    color: rgb(57, 57, 57);
+    font-family: Montserrat;
+    font-weight: 500;
+}
+
+/* Bot Message styles */
+.st-emotion-cache-4oy321{
+    background-color: hsl(199, 35%, 90%);
+    border-top-right-radius: 40px;
+    border-bottom-right-radius: 40px;
+    margin-right: 2rem;
+}
+
+.st-emotion-cache-4oy321 p{
+    font-family: Montserrat;
+    font-weight: 600;
+}
