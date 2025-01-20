@@ -1,23 +1,54 @@
-# Authentication
-# CHATBOT
-# WEBSCRAPING
-# DATABASE
-# Github_Scraper
-# Memory
+from typing import List, Optional
+from bs4 import BeautifulSoup
+from playwright.async_api import async_playwright
+import asyncio
+from langchain.text_splitter import RecursiveCharacterTextSplitter
 
-class Github_Scraper:
-    def __init__(self):
-        pass
+class GithubScraper:
+    def __init__(self, url: str):
+        self.url = url
     
-    def url_changer(self, url):
-        pass
+    def url_changer(self) -> str:
+        """Change GitHub URL to alternative domain"""
+        return self.url.replace('github', 'gitingest')
     
-    def scrape_content(self, url):
-        pass
+    async def scrape_content(self) -> Optional[str]:
+        """Scrape webpage content using Playwright"""
+        try:
+            async with async_playwright() as p:
+                browser = await p.chromium.launch(headless=True)
+                page = await browser.new_page()
+                
+                # Use modified URL from url_changer
+                modified_url = self.url_changer()
+                await page.goto(modified_url, timeout=30000)
+                
+                await page.wait_for_timeout(5000)
+                content = await page.content()
+                await browser.close()
+                return content
+        except Exception as e:
+            print(f"Scraping error: {e}")
+            return None
     
-    def get_data(self, url):
-        url = self.url_changer(url)
-        data = self.scrape_content(url)
+    @staticmethod
+    def process_content(content: str) -> List[str]:
+        """Extract text from textarea elements"""
+        try:
+            soup = BeautifulSoup(content, 'html.parser')
+            data = soup.find_all('textarea')
+            return [text.text for text in data] if data else []
+        except Exception as e:
+            print(f"Parsing error: {e}")
+            return []
+    
+    async def get_data(self) -> List[str]:
+        """Orchestrate scraping and processing"""
+        content = await self.scrape_content()
+        processed_content = self.process_content(content)
+        data = ''
+        if content:
+            data += ''.join(text for text in processed_content)
         return data
         
 class Web_Scraper:
@@ -109,4 +140,14 @@ class LLMcalls:
 class Backend:
     def __init__(self):
         pass
-        # intisiali
+    async def main(self):
+        url = input("Enter url for github scraping:")
+        github_scraper = GithubScraper(url)
+        chunker = TextProcessor()
+        data = await github_scraper.get_data()
+        print(data)
+        print(chunker.chunk_text(data))
+    
+if __name__ == '__main__':
+    backend = Backend()
+    asyncio.run(backend.main())
