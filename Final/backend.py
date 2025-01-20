@@ -124,7 +124,8 @@ class TextProcessor:
             chunk_overlap=self.chunk_overlap,
             separators=["\n\n", "\n", ".", " ", ""]
         )
-        return text_splitter.split_text(text)
+        chunks = text_splitter.split_text(text)
+        return [chunk.replace('\n', '') for chunk in chunks]
 
 class SnowflakeManager:
     def __init__(self):
