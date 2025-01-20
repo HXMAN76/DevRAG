@@ -186,15 +186,15 @@ class SnowflakeManager:
     def insert_data(self,data,source,user_id):
         # inserts data into the database
         if source.casefold() == 'Github':
-            insert_query = f"""INSERT INTO {user_id}_github (content) VALUES {content}"""
+            insert_query = f"""INSERT INTO {user_id}_github (content) VALUES {data}"""
             self.cursor.execute(insert_query)
             self.conn.commit()
         elif source.casefold() == 'Web':
-            insert_query = f"""INSERT INTO {user_id}_rag (content) VALUES {content}"""
+            insert_query = f"""INSERT INTO {user_id}_rag (content) VALUES {data}"""
             self.cursor.execute(insert_query)
             self.conn.commit()
         elif source.casefold() == 'PDF':
-            insert_query = f"""INSERT INTO {user_id}_pdf (content) VALUES {content}"""
+            insert_query = f"""INSERT INTO {user_id}_pdf (content) VALUES {data}"""
             self.cursor.execute(insert_query)
             self.conn.commit()
 
@@ -255,18 +255,48 @@ class SnowflakeManager:
         return [common_response,personal_response,github_response, pdf_response]
     
     def generate(self, query,user_id):
-        response = self.search(query)
-        memory = Memory().retrieve_memory(user_id)
+        document_details = self.search(query)
+        conversation_memory = Memory().retrieve_memory(user_id)
         
         instruction = f"""
             SELECT SNOWFLAKE.CORTEX.COMPLETE(
                 'mistral-large2',
-                $$You are an intelligent assistant who can answer the user query based on the provided document content
-                  and can also provide the relevant information.
-                Document: {response}
-                Query: {query}$$
-            );
-        """
+                $$  You are a helpful assistant using a Retrieval-Augmented Generation (RAG) method to answer user queries.  
+                    Here are the inputs provided to you:  
+
+                    ### Contextual Information
+                    1. **Document Details**: 
+                        {document_details}
+                    2. **Memory (Previous Conversation History)**:  
+                        {conversation_memory}
+                    3. **User Query**:  
+                        {query}
+                    ### Instructions:  
+                        - Use the provided **Document Details** as the primary source of truth to answer the query.  
+                        - Refer to the **Memory** to maintain conversation context and continuity. Use this information to make your response coherent and contextual.  
+                        - If relevant information from the **Memory** or **Document Details** is missing, clarify this in your response and guide the user on how to proceed.  
+                    ### Response:  
+                        - Be concise and accurate. If additional explanations are required, provide them clearly.  
+                        - Ensure your response aligns with the user's intent as reflected in the query and conversation context.  
+                        - Where applicable, suggest follow-up actions or related queries for deeper understanding.
+
+                    --- 
+                    **Example Input**:  
+
+                        - **Document Details**:  
+                                "This document is a developer's guide for integrating payment APIs. It includes sections on API authentication, error handling, and webhook configurations."  
+                        - **Memory**:  
+                            1.  User: "What are the common errors during payment API integration?"  
+                                Assistant: "The common errors include invalid API keys, incorrect endpoint URLs, and missing webhook signatures."  
+                            2.  User: "How do I fix invalid API key errors?"  
+                                Assistant: "Ensure you're using the API key issued for your account and verify it matches the required permissions."  
+
+                        - **User Query**:  
+                                "What are webhook configurations, and how do they work?"  
+                    **Example Output**:  
+                                "Webhook configurations are settings that allow your application to receive real-time updates from the payment API when specific events occur (e.g., successful payments, refunds). Configure the webhook URL in your API dashboard, ensure it points to an accessible endpoint, and validate incoming requests using the signature provided in the header to ensure authenticity."$$
+            );"""
+
         generation = self.session.sql(instruction).collect()
         return generation[0][0]
 
