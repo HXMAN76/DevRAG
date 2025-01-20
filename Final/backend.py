@@ -14,6 +14,13 @@ import json
 import firebase_admin
 from firebase_admin import credentials, auth, firestore
 from mistralai import Mistral
+import nest_asyncio
+from crawl4ai import AsyncWebCrawler
+import logging
+# Set logging level to WARNING to suppress unwanted info logs
+logging.getLogger("snowflake.connector").setLevel(logging.WARNING)
+logging.getLogger("snowflake.snowpark").setLevel(logging.WARNING)
+logging.getLogger("snowflake.core").setLevel(logging.WARNING)
 
 
 class GithubScraper:
@@ -64,14 +71,26 @@ class GithubScraper:
         return data
         
 class Web_Scraper:
-    def __init__(self):
-        pass
+    def __init__(self, url):
+        self.url = url
+        self.unwanted = ['signup', 'signin', 'register', 'login', 'billing', 'pricing', 'contact']
+        self.social_media = ['youtube', 'twitter', 'facebook', 'linkedin']
         
     def recursive_scraper(self, links):
         pass
         
-    def get_data(self, url):
-        pass
+    async def get_data(self):
+         async with AsyncWebCrawler() as crawler:
+            data = await crawler.arun(
+                url=self.url,
+                magic=True,
+                simulate_user=True,
+                override_navigator=True,
+                exclude_external_images=True,
+                exclude_social_media_links=True,
+            )
+            return data
+            
     
     def scrape_content(self, url):
         data , struc = self.get_data(url)
@@ -79,7 +98,7 @@ class Web_Scraper:
         return data
     
 class PDFScraper:
-    
+
     def clean_text(text):
         # Replace all types of whitespace (including newlines, tabs) with a single space
         text = re.sub(r'\s+', ' ', text)
@@ -380,15 +399,14 @@ class LLMcalls:
     
 class Backend:
     def __init__(self):
-        pass
+        self.chunker = TextProcessor()
     async def main(self):
-        url = input("Enter url for github scraping:")
-        github_scraper = GithubScraper(url)
-        chunker = TextProcessor()
-        data = await github_scraper.get_data()
-        print(data)
-        print(chunker.chunk_text(data))
-    
+        #github scraping 
+        # url = input("Enter url for github scraping:")
+        # github_scraper = GithubScraper(url)
+        # data = await github_scraper.get_data()
+        # print(self.chunker.chunk_text(data))
+        pass
 if __name__ == '__main__':
     backend = Backend()
     asyncio.run(backend.main())
