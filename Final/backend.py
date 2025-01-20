@@ -14,6 +14,14 @@ import json
 import firebase_admin
 from firebase_admin import credentials, auth, firestore
 from mistralai import Mistral
+import nest_asyncio
+from crawl4ai import AsyncWebCrawler
+import logging
+# Set logging level to WARNING to suppress unwanted info logs
+logging.getLogger("snowflake.connector").setLevel(logging.WARNING)
+logging.getLogger("snowflake.snowpark").setLevel(logging.WARNING)
+logging.getLogger("snowflake.core").setLevel(logging.WARNING)
+
 
 class GithubScraper:
     def __init__(self, url: str):
@@ -63,14 +71,26 @@ class GithubScraper:
         return data
         
 class Web_Scraper:
-    def __init__(self):
-        pass
+    def __init__(self, url):
+        self.url = url
+        self.unwanted = ['signup', 'signin', 'register', 'login', 'billing', 'pricing', 'contact']
+        self.social_media = ['youtube', 'twitter', 'facebook', 'linkedin']
         
     def recursive_scraper(self, links):
         pass
         
-    def get_data(self, url):
-        pass
+    async def get_data(self):
+         async with AsyncWebCrawler() as crawler:
+            data = await crawler.arun(
+                url=self.url,
+                magic=True,
+                simulate_user=True,
+                override_navigator=True,
+                exclude_external_images=True,
+                exclude_social_media_links=True,
+            )
+            return data
+            
     
     def scrape_content(self, url):
         data , struc = self.get_data(url)
@@ -78,7 +98,7 @@ class Web_Scraper:
         return data
     
 class PDFScraper:
-    
+
     def clean_text(text):
         # Replace all types of whitespace (including newlines, tabs) with a single space
         text = re.sub(r'\s+', ' ', text)
@@ -130,6 +150,19 @@ class TextProcessor:
 class SnowflakeManager:
     def __init__(self):
         self.uid = None
+        load_dotenv()
+        self.connection_params = {
+            "account": os.getenv("SNOWFLAKE_ACCOUNT"),
+            "user": os.getenv("SNOWFLAKE_USER"),
+            "password": os.getenv("SNOWFLAKE_PASSWORD"),
+            "role": "ACCOUNTADMIN",
+            "database": os.getenv("SNOWFLAKE_DATABASE"),
+            "warehouse": os.getenv("SNOWFLAKE_WAREHOUSE"),
+            "schema": os.getenv("SNOWFLAKE_SCHEMA"),
+        }
+        self.session = None
+        self.conn = None
+        self.cursor = None
     
     def get_uid(self):
         # returns data from auth page
@@ -153,14 +186,18 @@ class SnowflakeManager:
     def insert_data(self,data,source,user_id):
         # inserts data into the database
         if source.casefold() == 'Github':
-            # insert into github table
-            pass
+            insert_query = f"""INSERT INTO {user_id}_github (content) VALUES {data}"""
+            self.cursor.execute(insert_query)
+            self.conn.commit()
         elif source.casefold() == 'Web':
-            # insert into web table
-            pass
+            insert_query = f"""INSERT INTO {user_id}_rag (content) VALUES {data}"""
+            self.cursor.execute(insert_query)
+            self.conn.commit()
         elif source.casefold() == 'PDF':
-            # insert into pdf table
-            pass
+            insert_query = f"""INSERT INTO {user_id}_pdf (content) VALUES {data}"""
+            self.cursor.execute(insert_query)
+            self.conn.commit()
+
     def search(self,user_id, query):
         root = Root(self.session)
         # Search in the common search service
@@ -217,16 +254,49 @@ class SnowflakeManager:
         pdf_response = json.dumps(pdf_search_results.to_dict())
         return [common_response,personal_response,github_response, pdf_response]
     
-    def generate(self, query):
-        response = self.search(query)
+    def generate(self, query,user_id):
+        document_details = self.search(query)
+        conversation_memory = Memory().retrieve_memory(user_id)
+        
         instruction = f"""
             SELECT SNOWFLAKE.CORTEX.COMPLETE(
                 'mistral-large2',
-                $$You are an intelligent assistant who can answer the user query based on the provided document content and can also provide the relevant information.
-                Document: {response}
-                Query: {query}$$
-            );
-        """
+                $$  You are a helpful assistant using a Retrieval-Augmented Generation (RAG) method to answer user queries.  
+                    Here are the inputs provided to you:  
+
+                    ### Contextual Information
+                    1. **Document Details**: 
+                        {document_details}
+                    2. **Memory (Previous Conversation History)**:  
+                        {conversation_memory}
+                    3. **User Query**:  
+                        {query}
+                    ### Instructions:  
+                        - Use the provided **Document Details** as the primary source of truth to answer the query.  
+                        - Refer to the **Memory** to maintain conversation context and continuity. Use this information to make your response coherent and contextual.  
+                        - If relevant information from the **Memory** or **Document Details** is missing, clarify this in your response and guide the user on how to proceed.  
+                    ### Response:  
+                        - Be concise and accurate. If additional explanations are required, provide them clearly.  
+                        - Ensure your response aligns with the user's intent as reflected in the query and conversation context.  
+                        - Where applicable, suggest follow-up actions or related queries for deeper understanding.
+
+                    --- 
+                    **Example Input**:  
+
+                        - **Document Details**:  
+                                "This document is a developer's guide for integrating payment APIs. It includes sections on API authentication, error handling, and webhook configurations."  
+                        - **Memory**:  
+                            1.  User: "What are the common errors during payment API integration?"  
+                                Assistant: "The common errors include invalid API keys, incorrect endpoint URLs, and missing webhook signatures."  
+                            2.  User: "How do I fix invalid API key errors?"  
+                                Assistant: "Ensure you're using the API key issued for your account and verify it matches the required permissions."  
+
+                        - **User Query**:  
+                                "What are webhook configurations, and how do they work?"  
+                    **Example Output**:  
+                                "Webhook configurations are settings that allow your application to receive real-time updates from the payment API when specific events occur (e.g., successful payments, refunds). Configure the webhook URL in your API dashboard, ensure it points to an accessible endpoint, and validate incoming requests using the signature provided in the header to ensure authenticity."$$
+            );"""
+
         generation = self.session.sql(instruction).collect()
         return generation[0][0]
 
@@ -359,15 +429,14 @@ class LLMcalls:
     
 class Backend:
     def __init__(self):
-        pass
+        self.chunker = TextProcessor()
     async def main(self):
-        url = input("Enter url for github scraping:")
-        github_scraper = GithubScraper(url)
-        chunker = TextProcessor()
-        data = await github_scraper.get_data()
-        print(data)
-        print(chunker.chunk_text(data))
-    
+        #github scraping 
+        # url = input("Enter url for github scraping:")
+        # github_scraper = GithubScraper(url)
+        # data = await github_scraper.get_data()
+        # print(self.chunker.chunk_text(data))
+        pass
 if __name__ == '__main__':
     backend = Backend()
     asyncio.run(backend.main())
