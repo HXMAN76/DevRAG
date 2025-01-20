@@ -62,7 +62,7 @@ def create_navbar():
 
 def create_hero_section():
     """Create the hero section with title and subtitle"""
-    st.title("Welcome to DevRag", anchor=False)
+    st.title("Welcome to Dev", anchor=False)
     st.subheader(
         "Empowering developers with instant, AI-driven insights by combining "
         "Retrieval-Augmented Generation and dynamic web-scraped knowledge.",
@@ -77,17 +77,44 @@ def create_features_section():
     """Create the features section"""
     st.markdown("<div id='features'></div>", unsafe_allow_html=True)
     st.header("Features", anchor=False)
-    st.write("""
-    - **Accurate Insights**: Get precise answers from a vast database of developer documentation.
-    - **Customizable Knowledge Base**: Add your own links to keep the knowledge base up-to-date.
-    - **Instant Responses**: Chatbot interface provides quick and contextual answers.
-    - **Comprehensive Solutions**: Solve coding challenges, understand frameworks, and stay updated with the latest tools.
-    """)
+    st.markdown("""
+    <ul class="features-list">
+        <li><strong>Accurate Insights</strong>: Get precise answers from a vast database of developer documentation.</li>
+        <li><strong>Customizable Knowledge Base</strong>: Add your own links to keep the knowledge base up-to-date.</li>
+        <li><strong>Instant Responses</strong>: Chatbot interface provides quick and contextual answers.</li>
+        <li><strong>Comprehensive Solutions</strong>: Solve coding challenges, understand frameworks, and stay updated with the latest tools.</li>
+    </ul>
+    """, unsafe_allow_html=True)
+
+    st.markdown("""
+     <marquee behavior="scroll" direction="left" scrollamount="6" loop="infinite" class="tech-stack">
+        <img src="https://streamlit.io/images/brand/streamlit-logo-secondary-colormark-darktext.png" alt="streamlilt_logo" width="100%" style="width: 20%;height: 20%">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/f/ff/Snowflake_Logo.svg/1280px-Snowflake_Logo.svg.png" alt="snowflake" style="width: 20%;height: 20%">
+        <img src="https://upload.wikimedia.org/wikipedia/de/1/1c/Mistral_AI_logo.svg" alt="mistral" style="width: 10%;height: 10%">
+        <img src="https://ml.globenewswire.com/Resource/Download/3034f6cd-48c3-4b5e-bd7f-242dbaecaab4?size=2" alt="trulens" style="width: 10%;height: 10%">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/1a/Python-logo-notext.svg/1200px-Python-logo-notext.svg.png" alt="python" style="width: 10%;height: 10%">  
+    </marquee>
+    """,unsafe_allow_html=True)
 
 def create_about_section():
     """Create the about section"""
     st.markdown("<div id='about'></div>", unsafe_allow_html=True)
-    st.header("About", anchor=False)
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        st.subheader("📚 Vast Knowledge Base",anchor=False)
+        st.write("Access information from various programming languages, frameworks, and libraries.")
+
+    with col2:
+        st.subheader("🔍 Smart Code Search",anchor = False)
+        st.write("Find relevant code snippets and examples quickly and efficiently.")
+
+    with col3:
+        st.subheader("💡 Intelligent Suggestions", anchor=False)
+        st.write("Get context-aware recommendations and best practices for your code.")
+
+    st.html("<br><hr id='hr-1'>")
+
 
 def create_contact_section():
     """Create the contact section with profile card"""
@@ -108,9 +135,9 @@ def create_contact_section():
     # </div>
     # """
 
-    col1, col2, col3, col4 = st.columns(4)
+    rag, dev, hari, ranjana = st.columns(4)
 
-    col1.markdown(
+    rag.markdown(
         """<div class="card">
         <img class="profile-pic" src="https://avatars.githubusercontent.com/u/161674308?v=4" alt="placeholder">
         <p class="name">Raghav</p>
@@ -122,7 +149,7 @@ def create_contact_section():
         </div>
     </div>""" , unsafe_allow_html=True)
 
-    col2.markdown(
+    dev.markdown(
         """<div class="card">
         <img class="profile-pic" src="https://placehold.co/200" alt="placeholder">
         <p class="name">Dev Bala Saragesh</p>
@@ -134,7 +161,7 @@ def create_contact_section():
         </div>
     </div>""" , unsafe_allow_html=True)
 
-    col3.markdown(
+    hari.markdown(
         """<div class="card">
         <img class="profile-pic" src="https://placehold.co/200" alt="placeholder">
         <p class="name">Hari Heman</p>
@@ -146,7 +173,7 @@ def create_contact_section():
         </div>
     </div>""" , unsafe_allow_html=True)
 
-    col4.markdown(
+    ranjana.markdown(
         """<div class="card">
         <img class="profile-pic" src="https://placehold.co/200" alt="placeholder">
         <p class="name">SriRanjana</p>
@@ -157,6 +184,10 @@ def create_contact_section():
             <a href="#"><i class="fa-regular fa-envelope"></i></a>
         </div>
     </div>""" , unsafe_allow_html=True)
+
+def create_footer_section():
+    st.markdown("---")
+    st.header("© 2025 DevRag. All rights reserved.", anchor=False)
 
 
 def handle_navigation():
@@ -181,6 +212,7 @@ def main():
         create_about_section()
         create_features_section()
         create_contact_section()
+        create_footer_section()
 
 if __name__ == '__main__':
     main()
