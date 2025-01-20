@@ -38,7 +38,7 @@ class FirebaseAuth:
                 "auth_uri": secret["FIREBASE"]["AUTH_URI"],
                 "token_uri": secret["FIREBASE"]["TOKEN_URI"],
                 "auth_provider_x509_cert_url": secret["FIREBASE"]["AUTH_PROVIDER_X509_CERT_URL"],
-                "client_x509_cert_url": ["FIREBASE"]["CLIENT_X509_CERT_URL"],
+                "client_x509_cert_url": secret["FIREBASE"]["CLIENT_X509_CERT_URL"],
                 "universe_domain": secret["FIREBASE"]["UNIVERSE_DOMAIN"]
             }
             cred = credentials.Certificate(self.firebase_credentials)
