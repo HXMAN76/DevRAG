@@ -41,9 +41,7 @@ def extract_text_from_pdf(pdf_path):
     
     Returns:
         tuple: (extracted text, time taken in seconds)
-    """
-    start_time = time.time()
-    
+    """ 
     try:
         with open(pdf_path, 'rb') as pdf_file:
             reader = PyPDF2.PdfReader(pdf_file)
@@ -56,10 +54,7 @@ def extract_text_from_pdf(pdf_path):
             # Apply thorough cleaning after all text is extracted
             extracted_text = clean_text_thoroughly(extracted_text)
             
-            end_time = time.time()
-            time_taken = end_time - start_time
-            
-            return extracted_text, time_taken
+            return extracted_text
     except FileNotFoundError:
         return "Error: File not found. Please provide a valid PDF file path.", 0
     except Exception as e:

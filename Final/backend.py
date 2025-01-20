@@ -8,9 +8,15 @@ import firebase_admin
 from firebase_admin import credentials, auth, firestore
 import os
 from dotenv import load_dotenv
-from mistral import Mistral
+from mistralai import Mistral
 import json
-
+import re
+import PyPDF2
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from snowflake.core import Root
+import snowflake.connector
+from snowflake.snowpark import Session
+ 
 class Github_Scraper:
     def __init__(self):
         pass
@@ -42,10 +48,40 @@ class Web_Scraper:
         return data
     
 class PDFScraper:
-    def __init__(self):
-        pass
-    def extract_data(pdf_path):
-        pass
+    
+    def clean_text(text):
+        # Replace all types of whitespace (including newlines, tabs) with a single space
+        text = re.sub(r'\s+', ' ', text)
+        
+        # Remove spaces before punctuation
+        text = re.sub(r'\s+([.,!?:;])', r'\1', text)
+        
+        # Remove spaces at the beginning and end
+        text = text.strip()
+        
+        # Remove multiple newlines
+        text = re.sub(r'\n\s*\n', '\n', text)
+        
+        # Remove spaces at the beginning of lines
+        text = re.sub(r'^\s+', '', text, flags=re.MULTILINE)
+        
+        # Remove spaces at the end of lines
+        text = re.sub(r'\s+$', '', text, flags=re.MULTILINE)
+        
+        return text
+
+    def extract_data(self,pdf_path):
+        with open(pdf_path, 'rb') as pdf_file:
+            reader = PyPDF2.PdfReader(pdf_file)
+            extracted_text = ""
+            
+            for page in reader.pages:
+                page_text = page.extract_text()
+                extracted_text += page_text + "\n"
+            
+            # Apply thorough cleaning after all text is extracted
+            extracted_text = self.clean_text(extracted_text)
+        return extracted_text
     
 class TextProcessor:
     def __init__(self, chunk_size: int = 512, chunk_overlap: int = 50):
@@ -71,12 +107,19 @@ class SnowflakeManager:
         self.uid = uid
         
     def connect(self):
-        # returns connection object
-        pass       
+        self.conn = snowflake.connector.connect(**self.connection_params)
+        self.cursor = self.conn.cursor()
+        self.session = Session.builder.configs(self.connection_params).create()
+
     def disconnect(self):
-        # disconnects the connection
-        pass
-    def insert_data(self,data,source):
+        if self.cursor:
+            self.cursor.close()
+        if self.conn:
+            self.conn.close()
+        if self.session:
+            self.session.close()
+
+    def insert_data(self,data,source,user_id):
         # inserts data into the database
         if source.casefold() == 'Github':
             # insert into github table
@@ -87,13 +130,65 @@ class SnowflakeManager:
         elif source.casefold() == 'PDF':
             # insert into pdf table
             pass
-    def search(self, query):
-        # both common and user data
-        pass
+    def search(self,user_id, query):
+        root = Root(self.session)
+        # Search in the common search service
+        common_search_service = (
+            root
+            .databases[os.getenv("SNOWFLAKE_DATABASE")]
+            .schemas[os.getenv("SNOWFLAKE_SCHEMA")]
+            .cortex_search_services[os.getenv("SNOWFLAKE_WAREHOUSE")]
+        )
+        common_search_results = common_search_service.search(
+            query=query,
+            columns=["CONTENT"],
+            limit=5
+        )
+        common_response = json.dumps(common_search_results.to_dict())
+        # Search in the personal search service
+        personal_search_service = (
+            root
+            .databases[os.getenv("SNOWFLAKE_DATABASE")]
+            .schemas[os.getenv("SNOWFLAKE_SCHEMA")]
+            .cortex_search_services[f"{user_id}_ragsearch"]
+        )
+        personal_search_results = personal_search_service.search(
+            query=query,
+            columns=["CONTENT"],
+            limit=5
+        )
+        personal_response = json.dumps(personal_search_results.to_dict())
+        # Search in the github search service
+        github_search_service = (
+            root
+            .databases[os.getenv("SNOWFLAKE_DATABASE")]
+            .schemas[os.getenv("SNOWFLAKE_SCHEMA")]
+            .cortex_search_services[f"{user_id}_githubsearch"]
+        )
+        github_search_results = github_search_service.search(
+            query=query,
+            columns=["CONTENT"],
+            limit=5
+        )
+        github_response = json.dumps(github_search_results.to_dict())
+        # Search in the pdf search service
+        pdf_search_service = (
+            root
+            .databases[os.getenv("SNOWFLAKE_DATABASE")]
+            .schemas[os.getenv("SNOWFLAKE_SCHEMA")]
+            .cortex_search_services[f"{user_id}_pdfsearch"]
+        )
+        pdf_search_results = pdf_search_service.search(
+            query=query,
+            columns=["CONTENT"],
+            limit=5
+        )
+        pdf_response = json.dumps(pdf_search_results.to_dict())
+        return [common_response,personal_response,github_response, pdf_response]
     
     def generate(self, query):
         response = self.search(query)
-        INSTRUCTION = f"""
+        instruction = f"""
             SELECT SNOWFLAKE.CORTEX.COMPLETE(
                 'mistral-large2',
                 $$You are an intelligent assistant who can answer the user query based on the provided document content and can also provide the relevant information.
@@ -101,7 +196,7 @@ class SnowflakeManager:
                 Query: {query}$$
             );
         """
-        generation = None # fill up
+        generation = self.session.sql(instruction).collect()
         return generation
 
 class Memory:
@@ -235,3 +330,11 @@ class Backend:
     def __init__(self):
         pass
         # intisiali
+def main():
+    memory = Memory()
+    uid = "3Wb8QCE63iUt7XHlWQpqKHvCgs22"
+    query = 'isuhuiahvuiehv'
+    response = "lkmlemrlkmevmlsav"
+    memory.manage_conversations(uid,query,response)
+if __name__ == "__main__":
+    main()
