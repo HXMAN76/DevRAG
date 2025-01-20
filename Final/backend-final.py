@@ -5,6 +5,9 @@ import asyncio
 import logging
 from typing import List, Optional, Dict, Any
 
+# Middleware Libraries
+from combined.py import get_user_id
+
 # Core Libraries
 from dotenv import load_dotenv
 from bs4 import BeautifulSoup
@@ -241,7 +244,7 @@ class SnowflakeManager:
         self.session = None
         self.conn = None
         self.cursor = None
-        self.uid = None
+        self.uid = get_user_id()
         
     def connect(self):
         self.conn = snowflake.connector.connect(**self.connection_params)
