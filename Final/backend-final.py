@@ -4,6 +4,8 @@ import json
 import asyncio
 import logging
 from typing import List, Optional, Dict, Any
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
 
 # Middleware Libraries
 from combined.py import get_user_id
@@ -259,77 +261,72 @@ class SnowflakeManager:
         if self.session:
             self.session.close()
 
-    def insert_data(self,data,source):
-        # inserts data into the database
-        if source.casefold() == 'Github':
-            insert_query = f"""INSERT INTO {self.uid}_github (content) VALUES {data}"""
-            self.cursor.execute(insert_query)
-            self.conn.commit()
-        elif source.casefold() == 'Web':
-            insert_query = f"""INSERT INTO {self.uid}_rag (content) VALUES {data}"""
-            self.cursor.execute(insert_query)
-            self.conn.commit()
-        elif source.casefold() == 'PDF':
-            insert_query = f"""INSERT INTO {self.uid}_pdf (content) VALUES {data}"""
-            self.cursor.execute(insert_query)
+    def _insert(self, table_name, contents):
+        if contents:
+            insert_queries = [f"INSERT INTO {table_name} (content) VALUES ('{content}')" for content in contents]
+            for query in insert_queries:
+                self.cursor.execute(query)
             self.conn.commit()
 
-    def search(self,user_id, query):
+    def insert_into_github_rag(self, user_id, contents):
+        with ThreadPoolExecutor() as executor:
+            futures = {executor.submit(self._insert, f"{user_id}_github", contents): user_id}
+            for future in as_completed(futures):
+                try:
+                    future.result()  # This will raise an exception if the insert failed
+                except Exception as e:
+                    print(f"Error inserting into {user_id}_github: {e}")
+
+    def insert_into_personal_rag(self, user_id, contents):
+        with ThreadPoolExecutor() as executor:
+            futures = {executor.submit(self._insert, f"{user_id}_rag", contents): user_id}
+            for future in as_completed(futures):
+                try:
+                    future.result()
+                except Exception as e:
+                    print(f"Error inserting into {user_id}_rag: {e}")
+
+    def insert_into_pdf_rag(self, user_id, contents):
+        with ThreadPoolExecutor() as executor:
+            futures = {executor.submit(self._insert, f"{user_id}_pdf", contents): user_id}
+            for future in as_completed(futures):
+                try:
+                    future.result()
+                except Exception as e:
+                    print(f"Error inserting into {user_id}_pdf: {e}")
+
+    def _search_service(self, user_id, service_name, query):
         root = Root(self.session)
-        # Search in the common search service
-        common_search_service = (
-            root
-            .databases[os.getenv("SNOWFLAKE_DATABASE")]
-            .schemas[os.getenv("SNOWFLAKE_SCHEMA")]
-            .cortex_search_services[os.getenv("SNOWFLAKE_WAREHOUSE")]
+        search_service = (
+            root.databases[os.getenv("SNOWFLAKE_DATABASE")]
+                .schemas[os.getenv("SNOWFLAKE_SCHEMA")]
+                .cortex_search_services[service_name]
         )
-        common_search_results = common_search_service.search(
-            query=query,
-            columns=["CONTENT"],
-            limit=5
-        )
-        common_response = json.dumps(common_search_results.to_dict())
-        # Search in the personal search service
-        personal_search_service = (
-            root
-            .databases[os.getenv("SNOWFLAKE_DATABASE")]
-            .schemas[os.getenv("SNOWFLAKE_SCHEMA")]
-            .cortex_search_services[f"{user_id}_ragsearch"]
-        )
-        personal_search_results = personal_search_service.search(
-            query=query,
-            columns=["CONTENT"],
-            limit=5
-        )
-        personal_response = json.dumps(personal_search_results.to_dict())
-        # Search in the github search service
-        github_search_service = (
-            root
-            .databases[os.getenv("SNOWFLAKE_DATABASE")]
-            .schemas[os.getenv("SNOWFLAKE_SCHEMA")]
-            .cortex_search_services[f"{user_id}_githubsearch"]
-        )
-        github_search_results = github_search_service.search(
-            query=query,
-            columns=["CONTENT"],
-            limit=5
-        )
-        github_response = json.dumps(github_search_results.to_dict())
-        # Search in the pdf search service
-        pdf_search_service = (
-            root
-            .databases[os.getenv("SNOWFLAKE_DATABASE")]
-            .schemas[os.getenv("SNOWFLAKE_SCHEMA")]
-            .cortex_search_services[f"{user_id}_pdfsearch"]
-        )
-        pdf_search_results = pdf_search_service.search(
-            query=query,
-            columns=["CONTENT"],
-            limit=5
-        )
-        pdf_response = json.dumps(pdf_search_results.to_dict())
-        return [common_response,personal_response,github_response, pdf_response]
-    
+        search_results = search_service.search(query=query, columns=["CONTENT"], limit=5)
+        return json.dumps(search_results.to_dict())
+
+    def search(self, user_id, query: str) -> list:
+        services = {
+            "common": os.getenv("SNOWFLAKE_WAREHOUSE"),
+            "personal": f"{user_id}_ragsearch",
+            "github": f"{user_id}_githubsearch",
+            "pdf": f"{user_id}_pdfsearch"
+        }
+
+        results = []
+        
+        with ThreadPoolExecutor() as executor:
+            futures = {executor.submit(self._search_service, user_id, service_name, query): name for name, service_name in services.items()}
+            
+            for future in as_completed(futures):
+                service_name = futures[future]
+                try:
+                    results.append(future.result())
+                except Exception as e:
+                    print(f"Error searching in {service_name}: {e}")
+
+        return results
+
     def generate(self, query,user_id):
         document_details = self.search(query)
         conversation_memory = Memory().retrieve_memory(user_id)
@@ -508,6 +505,8 @@ class Backend:
         self.config = ConfigManager.load_config()
         self.text_processor = TextProcessor()
         self.snowflake_manager = SnowflakeManager()
+        self.memory = Memory()
+        self.user_id = ''
 
     async def webcrawler(self):
         """Main Webcrawler processing method"""
@@ -517,21 +516,28 @@ class Backend:
         print(type(data))
         processed_chunks = ''.join(chunk for data_item in data for chunk in self.text_processor.chunk_text(data_item))
         # call insert docs from snowflake manager
-        
+        self.snowflake_manager.insert_into_personal_rag(self.user_id,processed_chunks)
+
     async def github_scraper(self):
         """Main GitHub scraper processing method"""
         url = input("Enter GitHub URL for scraping: ")
         scraper = GithubScraper(url)
         data = await scraper.get_data()
         processed_chunks = ''.join(chunk for chunk in self.text_processor.chunk_text(data))
-        print(processed_chunks)
+        self.snowflake_manager.insert_into_github_rag(self.user_id,processed_chunks)
         
     def pdf_scraper(self):
         pdf_path = input("Enter path to PDF file: ")
         scraper = PDFScraper()
         data = scraper.extract_data(pdf_path)
         processed_chunks = ''.join(chunk for chunk in self.text_processor.chunk_text(data))
-        print(processed_chunks)
+        self.snowflake_manager.insert_into_pdf_rag(self.user_id,processed_chunks)
+    
+    def query(self):
+        query = input('Enter the query')
+        response = self.snowflake_manager.generate(query,self.user_id)
+        print(response)
+        self.memory.manage_conversations(self.user_id,query,response)
 
 async def run():
     """Async entry point"""
