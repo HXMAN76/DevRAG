@@ -4,6 +4,16 @@ from playwright.async_api import async_playwright
 import asyncio
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 import re
+import PyPDF2
+import snowflake.connector
+from snowflake.core import Root
+from snowflake.snowpark import Session
+import os
+from dotenv import load_dotenv
+import json
+import firebase_admin
+from firebase_admin import credentials, auth, firestore
+from mistralai import Mistral
 
 class GithubScraper:
     def __init__(self, url: str):
