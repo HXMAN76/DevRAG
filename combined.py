@@ -205,8 +205,8 @@ class FirebaseAuth:
             return None
 
 def initialize_session_state():
-    if 'current_form' not in st.session_state:
-        st.session_state.current_form = 'login'
+    if 'current_page' not in st.session_state:
+        st.session_state.current_page = 'login'
     if 'auth' not in st.session_state:
         st.session_state.auth = FirebaseAuth()
     if 'user_id' not in st.session_state:
@@ -234,7 +234,7 @@ def main():
         st.title("DevRag",anchor=False)
 
         # Login Form
-        if st.session_state.current_form == 'login':
+        if st.session_state.current_page == 'login':
             st.subheader("Login", anchor=False)
             with st.form("login_form"):
                 email = st.text_input("Email")
@@ -260,15 +260,15 @@ def main():
             col1, col2 = st.columns(2)
             with col1:
                 if st.button("Forgot Password?", key="forgot-password"):
-                    st.session_state.current_form = 'forgot_password'
+                    st.session_state.current_page = 'forgot_password'
                     st.rerun()
             with col2:
                 if st.button("New User? Sign Up", key="new-user"):
-                    st.session_state.current_form = 'signup'
+                    st.session_state.current_page = 'signup'
                     st.rerun()
         
         # Signup Form
-        elif st.session_state.current_form == 'signup':
+        elif st.session_state.current_page == 'signup':
             st.subheader("🌟 Ready to supercharge your development?",anchor=False)
             st.markdown("Sign up now to get full access to DevRag and boost your coding productivity!")
             with st.form("signup_form"):
@@ -300,17 +300,17 @@ def main():
                             st.success("Registration successful! Snowflake resources are being set up in the background.")
                             st.info("You can proceed to login while we complete the setup.")
                             time.sleep(2)
-                            st.session_state.current_form = 'login'
+                            st.session_state.current_page = 'login'
                             st.rerun()
                         except Exception as e:
                             st.error(str(e))
             
             if st.button("Already Registered? Login Now", key="back-to-login"):
-                st.session_state.current_form = 'login'
+                st.session_state.current_page = 'login'
                 st.rerun()
         
         # Forgot Password Form
-        elif st.session_state.current_form == 'forgot_password':
+        elif st.session_state.current_page == 'forgot_password':
             st.subheader("Reset Password", anchor=False)
             with st.form("forgot_password_form"):
                 email = st.text_input("Email")
@@ -326,13 +326,13 @@ def main():
                             st.session_state.auth.reset_password(email)
                             st.success("Password reset link sent to your email!")
                             time.sleep(2)
-                            st.session_state.current_form = 'login'
+                            st.session_state.current_page = 'login'
                             st.rerun()
                         except Exception as e:
                             st.error(str(e))
             
             if st.button("Back to Login", key="back-to-login"):
-                st.session_state.current_form = 'login'
+                st.session_state.current_page = 'login'
                 st.rerun()
     
     else:
@@ -346,7 +346,7 @@ def main():
         
         if st.button("Logout"):
             st.session_state.user_id = None
-            st.session_state.current_form = 'login'
+            st.session_state.current_page = 'login'
             st.rerun()
 
 def get_user_id():
