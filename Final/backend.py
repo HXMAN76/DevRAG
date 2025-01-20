@@ -197,7 +197,7 @@ class SnowflakeManager:
             );
         """
         generation = self.session.sql(instruction).collect()
-        return generation
+        return generation[0][0]
 
 class Memory:
     def __init__(self):
@@ -331,10 +331,8 @@ class Backend:
         pass
         # intisiali
 def main():
-    memory = Memory()
-    uid = "3Wb8QCE63iUt7XHlWQpqKHvCgs22"
-    query = 'isuhuiahvuiehv'
-    response = "lkmlemrlkmevmlsav"
-    memory.manage_conversations(uid,query,response)
+
+    pass
+    
 if __name__ == "__main__":
     main()
