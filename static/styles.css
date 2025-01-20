@@ -34,14 +34,30 @@
     transition: 0.5s ease transform;
 }
 
-#welcome-to-devrag{
-    font-size: 4.5rem;
+#welcome-to-dev{
+    font-size: 4.3rem;
     text-align: center;
     color: white;
+    font-family: Montserrat;
 }
 
-ul{
-    color:white;
+#welcome-to-dev::after{
+    content: "Rag";
+    color: hsl(16, 100%, 55%);
+    font-family: Montserrat;
+}
+
+.features-list strong{
+    color:hsl(16, 100%, 55%);;
+    font-size: 1.6rem;
+    font-family: sans-serif;
+}
+
+.features-list li{
+    color: white;
+    font-size: 1.2rem;
+    font-family:'Lucida Sans Unicode', sans-serif;
+    font-weight: 800;
 }
 
 h3 {
@@ -62,6 +78,9 @@ h3 {
     justify-self: start;
 }
 
+#about,#features,#team,#tech-stack{
+    color: white;
+}
 
 .st-key-get-started button {
     border-radius: 999px;
@@ -92,6 +111,66 @@ h3 {
     color: white;
 }
 
+.st-emotion-cache-1h3k0y3{
+    color: white;
+    border-radius: 10px;
+    padding: 1rem;
+    background: rgba(125, 125, 125, 0.3);
+    backdrop-filter: blur( 13px );
+    box-shadow: 0 8px 32px 0 hsla(18, 94%, 20%, 0.3);
+    max-width: 100%;
+}
+
+.st-emotion-cache-1h3k0y3 p{
+    text-align: center;
+}
+
+.st-emotion-cache-1h3k0y3:hover{
+    transform: scale(1.05);
+    transition: ease all 0.5s;
+    cursor: pointer;
+    border: 1px solid white;
+}
+
+#hr-1{
+    border: 1px solid tomato;
+    opacity: 50%;
+}
+
+.tech-stack{
+    display: flex;
+    justify-content: space-evenly;
+    align-items: center;
+    margin: 1rem 0;
+}
+
+.tech-stack img:hover{
+    transform: scale(1.1);
+    filter: drop-shadow(0 0 8px rgba(255, 69, 0, 0.6));
+    transition: ease all 0.3s;
+    cursor: pointer;
+}
+
+#snowflake:hover{
+    filter: drop-shadow(0 0 8px rgba(36, 182, 233, 0.6));
+}
+
+@keyframes float {
+    0% {
+        transform: translateY(0px);
+    }
+    50% {
+        transform: translateY(-10px);
+    }
+    100% {
+        transform: translateY(0px);
+    }
+}
+
+.tech-stack img {
+    animation: float 3s ease-in-out infinite;
+}
+
 .card {
     display: flex;
     flex-direction: column;
@@ -106,7 +185,9 @@ h3 {
 }
 
 .card:hover{
-    transition: ease all 0.5s;;
+    transform: scale(1.05);
+    transition: ease all 0.5s;
+    cursor: pointer;
 }
 
 .card:hover .social-media-handles {
@@ -157,4 +238,13 @@ h3 {
 .social-media-handles a:hover {
     transform: translateY(-5px) scale(1.15);
     transition: ease all 0.5s;
+}
+
+#footer{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: white;
+    font-size: 1.2rem;
+    opacity: 0.6;
 }

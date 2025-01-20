@@ -14,9 +14,12 @@ import json
 import firebase_admin
 from firebase_admin import credentials, auth, firestore
 from mistralai import Mistral
-import nest_asyncio
 from crawl4ai import AsyncWebCrawler
 import logging
+from bs4 import BeautifulSoup
+from ..combined import get_user_id
+from collections import deque
+logging.basicConfig(level=logging.INFO)
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import toml
 # Set logging level to WARNING to suppress unwanted info logs
@@ -74,19 +77,27 @@ class GithubScraper:
             data += ''.join(text for text in processed_content)
         return data
         
-class Web_Scraper:
-    def __init__(self, url):
+
+class WebScraper:
+    def __init__(self, url: str, max_depth: int = 3):
         self.url = url
+        self.max_depth = max_depth
         self.unwanted = ['signup', 'signin', 'register', 'login', 'billing', 'pricing', 'contact']
         self.social_media = ['youtube', 'twitter', 'facebook', 'linkedin']
-        
-    def recursive_scraper(self, links):
-        pass
-        
-    async def get_data(self):
-         async with AsyncWebCrawler() as crawler:
-            data = await crawler.arun(
-                url=self.url,
+        self.scrape_content = []
+        self.visited = set()  # To keep track of visited URLs
+        self.crawler = AsyncWebCrawler()
+
+    def is_valid_url(self, url: str) -> bool:
+        """Check if the URL starts with valid schemes."""
+        pattern = re.compile(r'^(http://|https://|file://|raw:).*')
+        return bool(pattern.match(url))
+
+    async def get_data(self, url: str) -> Optional[str]:
+        """Fetch data from the specified URL using AsyncWebCrawler."""
+        try:
+            data = await self.crawler.arun(
+                url=url,
                 magic=True,
                 simulate_user=True,
                 override_navigator=True,
@@ -94,12 +105,48 @@ class Web_Scraper:
                 exclude_social_media_links=True,
             )
             return data
-            
-    
-    def scrape_content(self, url):
-        data , struc = self.get_data(url)
-        data += self.recursive_scraper(struc.links)
-        return data
+        except Exception as e:
+            logging.error(f"Error fetching data from {url}: {e}")
+            return None
+
+    async def extract_links(self, html_content: str) -> List[str]:
+        """Extract all valid links from the HTML content."""
+        soup = BeautifulSoup(html_content, 'html.parser')
+        links = []
+        
+        for a_tag in soup.find_all('a', href=True):
+            link = a_tag['href']
+            # Ensure that the link is absolute and valid
+            if self.is_valid_url(link) and not any(word in link for word in self.unwanted + self.social_media):
+                links.append(link)
+        
+        return links
+
+    async def dfs(self, url: str, depth: int) -> None:
+        """Recursively scrape using depth-first search."""
+        if depth > self.max_depth or url in self.visited or not self.is_valid_url(url):
+            return  # Base case for recursion
+        
+        self.visited.add(url)  # Mark this URL as visited
+        
+        data = await self.get_data(url)
+        if data is None:
+            return  # Skip if there's no valid data
+        
+        # Extract links from the current page's HTML content
+        links = await self.extract_links(data.html)
+        
+        # Append current URL content (if needed)
+        self.scrape_content.append(data.markdown)
+
+        # Recursively visit each link found
+        for link in links:
+            await self.dfs(link, depth + 1)
+
+    async def scrape(self) -> List[str]:
+        """Start the scraping process using DFS."""
+        await self.dfs(self.url, 0)  # Start DFS from the initial URL at depth 0
+        return self.scrape_content
     
 class PDFScraper:
 
@@ -167,12 +214,7 @@ class SnowflakeManager:
         self.session = None
         self.conn = None
         self.cursor = None
-    
-    def get_uid(self):
-        # returns data from auth page
-        pass
-    def set_uid(self, uid):
-        self.uid = uid
+        self.uid = get_user_id()
         
     def connect(self):
         self.conn = snowflake.connector.connect(**self.connection_params)
@@ -433,6 +475,16 @@ class Backend:
     def __init__(self):
         self.chunker = TextProcessor()
     async def main(self):
+        # github scraping 
+        url = input("Enter url for github scraping:")
+        github_scraper = GithubScraper(url)
+        data = await github_scraper.get_data()
+        print(self.chunker.chunk_text(data))
+        # url = input("Enter url for web scraping:")
+        # scraper = WebScraper(url)
+        # data = await scraper.scrape()
+        # print(data)
+        
         #github scraping 
         # url = input("Enter url for github scraping:")
         # github_scraper = GithubScraper(url)

@@ -45,7 +45,7 @@ def set_background(image_path):
 
 def load_custom_css():
     # Load custom CSS styles
-    with open('static/styles.css', 'r') as f:  # Move CSS to separate file
+    with open('static/styles.css', 'r') as f:
         st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
 def create_navbar():
@@ -53,9 +53,8 @@ def create_navbar():
     st.markdown("""
     <div class="navbar">
         <a href="#home">Home</a>
-        <a href="#about">About</a>
         <a href="#features">Features</a>
-        <a href="#contact-us">Contact Us</a>
+        <a href="#contact-us">Team</a>
     </div>
     """, unsafe_allow_html=True)
     st.markdown("<div id='home'></div>", unsafe_allow_html=True)
@@ -68,10 +67,9 @@ def create_hero_section():
         "Retrieval-Augmented Generation and dynamic web-scraped knowledge.",
         anchor=False
     )
+
     if st.button("Get Started ↗", key="get-started", type="primary"):
-        # st.session_state.current_page = 'chatbot'
-        # st.rerun()
-        st.html('<script>window.location.href = "http://localhost:8501/chatbot";</script>')
+        pass
 
 def create_features_section():
     """Create the features section"""
@@ -86,19 +84,22 @@ def create_features_section():
     </ul>
     """, unsafe_allow_html=True)
 
+
+def create_tech_stack_section():
+    st.header("Tech Stack", anchor=False)
     st.markdown("""
-     <marquee behavior="scroll" direction="left" scrollamount="6" loop="infinite" class="tech-stack">
-        <img src="https://streamlit.io/images/brand/streamlit-logo-secondary-colormark-darktext.png" alt="streamlilt_logo" width="100%" style="width: 20%;height: 20%">
-        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/f/ff/Snowflake_Logo.svg/1280px-Snowflake_Logo.svg.png" alt="snowflake" style="width: 20%;height: 20%">
-        <img src="https://upload.wikimedia.org/wikipedia/de/1/1c/Mistral_AI_logo.svg" alt="mistral" style="width: 10%;height: 10%">
-        <img src="https://ml.globenewswire.com/Resource/Download/3034f6cd-48c3-4b5e-bd7f-242dbaecaab4?size=2" alt="trulens" style="width: 10%;height: 10%">
-        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/1a/Python-logo-notext.svg/1200px-Python-logo-notext.svg.png" alt="python" style="width: 10%;height: 10%">  
-    </marquee>
+     <div class="tech-stack">
+        <img src="https://streamlit.io/images/brand/streamlit-logo-secondary-colormark-darktext.png" alt="streamlilt_logo" style="width: 15%;height: 15%">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/f/ff/Snowflake_Logo.svg/1280px-Snowflake_Logo.svg.png" alt="snowflake" id="snowflake" style="width: 20%;height: 20%;">
+        <img src="https://static1.squarespace.com/static/65c726ca17f84d5307a0dda1/65da1a93a8e8634b664835c9/65f6a87476d8e45fc3010249/1711102391682/announcing-mistral.png?format=1500w" alt="mistral" style="width: 10%;height: 10%">
+        <img src="https://ml.globenewswire.com/Resource/Download/3034f6cd-48c3-4b5e-bd7f-242dbaecaab4?size=2" alt="trulens" style="width: 8%;height: 8%">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Python-logo-notext.svg/1869px-Python-logo-notext.svg.png" alt="python" style="width: 8%;height: 8%">  
+        <img src="https://www.ichdata.com/wp-content/uploads/2017/06/2024070803153850.png" alt="fireBase" style="width: 15%;height: 15%">
+    </div>
     """,unsafe_allow_html=True)
 
 def create_about_section():
     """Create the about section"""
-    st.markdown("<div id='about'></div>", unsafe_allow_html=True)
     col1, col2, col3 = st.columns(3)
 
     with col1:
@@ -116,86 +117,64 @@ def create_about_section():
     st.html("<br><hr id='hr-1'>")
 
 
-def create_contact_section():
+def create_team_section():
     """Create the contact section with profile card"""
     st.markdown("<div id='contact-us'></div>", unsafe_allow_html=True)
-    st.header("Contact Us", anchor=False)
-    
-    # Profile card HTML
-    # profile_card_html = """
-    # <div class="card">
-    #     <img class="profile-pic" src="https://placehold.co/200" alt="placeholder">
-    #     <p class="name">Raghav</p>
-    #     <p class="role">Frontend Developer</p>
-    #     <div class="social-media-handles">
-    #         <a href="#"><img src="static/icons8-linkedin-50.png" alt="linkedin"/></a>
-    #         <a href="#"><img src="static/icons8-github-90.png" alt="github"/></a>
-    #         <a href="#"><img src="static/icons8-gmail-50.png" alt="gmail"/></a>
-    #     </div>
-    # </div>
-    # """
+    st.header("Team", anchor=False)
 
     rag, dev, hari, ranjana = st.columns(4)
 
     rag.markdown(
         """<div class="card">
-        <img class="profile-pic" src="https://avatars.githubusercontent.com/u/161674308?v=4" alt="placeholder">
+        <img class="profile-pic" src="https://raw.githubusercontent.com/HXMAN76/DevRAG/refs/heads/main/static/Raghav_profile.jpg" alt="placeholder">
         <p class="name">Raghav</p>
         <p class="role">Frontend Developer</p>
         <div class="social-media-handles">
-            <a href="#"><i class="fa-brands fa-linkedin"></i></a>
-            <a href="#"><i class="fa-brands fa-github"></i></a>
-            <a href="#"><i class="fa-regular fa-envelope"></i></a>
+            <a href="https://www.linkedin.com/in/raghav--n/"><i class="fa-brands fa-linkedin"></i></a>
+            <a href="https://github.com/Rag-795"><i class="fa-brands fa-github"></i></a>
+            <a href="mailto:balaji.saragesh@gmail.com"><i class="fa-regular fa-envelope"></i></a>
         </div>
     </div>""" , unsafe_allow_html=True)
 
     dev.markdown(
         """<div class="card">
-        <img class="profile-pic" src="https://placehold.co/200" alt="placeholder">
+        <img class="profile-pic" src="https://raw.githubusercontent.com/HXMAN76/DevRAG/refs/heads/main/static/saragesh.jpg" alt="placeholder" style="width:150px">
         <p class="name">Dev Bala Saragesh</p>
         <p class="role">Backend Developer</p>
         <div class="social-media-handles">
-            <a href="#"><i class="fa-brands fa-linkedin"></i></a>
-            <a href="#"><i class="fa-brands fa-github"></i></a>
-            <a href="#"><i class="fa-regular fa-envelope"></i></a>
+            <a href="https://www.linkedin.com/in/devbalasarageshbs/"><i class="fa-brands fa-linkedin"></i></a>
+            <a href="https://github.com/dbsaragesh-bs"><i class="fa-brands fa-github"></i></a>
+            <a href="mailto:balaji.saragesh@gmail.com"><i class="fa-regular fa-envelope"></i></a>
         </div>
     </div>""" , unsafe_allow_html=True)
 
     hari.markdown(
         """<div class="card">
-        <img class="profile-pic" src="https://placehold.co/200" alt="placeholder">
+        <img class="profile-pic" src="https://raw.githubusercontent.com/HXMAN76/DevRAG/refs/heads/main/static/Hari_Profile_Pic.jpg" alt="placeholder">
         <p class="name">Hari Heman</p>
         <p class="role">Backend Developer</p>
         <div class="social-media-handles">
-            <a href="#"><i class="fa-brands fa-linkedin"></i></a>
-            <a href="#"><i class="fa-brands fa-github"></i></a>
-            <a href="#"><i class="fa-regular fa-envelope"></i></a>
+            <a href="https://www.linkedin.com/in/hari-heman/"><i class="fa-brands fa-linkedin"></i></a>
+            <a href="https://github.com/HXMAN76"><i class="fa-brands fa-github"></i></a>
+            <a href="mailto:hariheman76@gmail.com"><i class="fa-regular fa-envelope"></i></a>
         </div>
     </div>""" , unsafe_allow_html=True)
 
     ranjana.markdown(
         """<div class="card">
-        <img class="profile-pic" src="https://placehold.co/200" alt="placeholder">
+        <img class="profile-pic" src="https://raw.githubusercontent.com/HXMAN76/DevRAG/refs/heads/main/static/Ranjana_Profile_Pic.jpg" alt="placeholder">
         <p class="name">SriRanjana</p>
         <p class="role">Backend Developer</p>
         <div class="social-media-handles">
-            <a href="#"><i class="fa-brands fa-linkedin"></i></a>
-            <a href="#"><i class="fa-brands fa-github"></i></a>
-            <a href="#"><i class="fa-regular fa-envelope"></i></a>
+            <a href="https://www.linkedin.com/in/sriranjana-chitraboopathy-50b88828a/"><i class="fa-brands fa-linkedin"></i></a>
+            <a href="https://github.com/sriranjanac"><i class="fa-brands fa-github"></i></a>
+            <a href="mailto:sriranjanac@gmail.com"><i class="fa-regular fa-envelope"></i></a>
         </div>
     </div>""" , unsafe_allow_html=True)
 
 def create_footer_section():
-    st.markdown("---")
-    st.header("© 2025 DevRag. All rights reserved.", anchor=False)
-
-
-def handle_navigation():
-    """Handle page navigation"""
-    if 'current_page' not in st.session_state:
-        st.session_state.current_page = 'landing'
-    if st.session_state.current_page == 'chatbot':
-        import chatbot
+    st.html("<br><hr id='hr-2'>")
+    st.html("<span id='footer'>© 2025 DevRag. All rights reserved.</span>")
 
 def main():
     """Main application function"""
@@ -203,16 +182,14 @@ def main():
     hide_dev_options()
     set_background(BG_IMAGE)
     load_custom_css()
-    handle_navigation()
-    
-    create_navbar()
-    
-    if st.session_state.get('current_page') == 'landing':
-        create_hero_section()
-        create_about_section()
-        create_features_section()
-        create_contact_section()
-        create_footer_section()
+
+    create_navbar()    
+    create_hero_section()
+    create_about_section()
+    create_features_section()
+    create_tech_stack_section()
+    create_team_section()
+    create_footer_section()
 
 if __name__ == '__main__':
     main()
