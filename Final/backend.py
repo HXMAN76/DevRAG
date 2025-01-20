@@ -15,6 +15,7 @@ import firebase_admin
 from firebase_admin import credentials, auth, firestore
 from mistralai import Mistral
 
+
 class GithubScraper:
     def __init__(self, url: str):
         self.url = url
@@ -130,6 +131,19 @@ class TextProcessor:
 class SnowflakeManager:
     def __init__(self):
         self.uid = None
+        load_dotenv()
+        self.connection_params = {
+            "account": os.getenv("SNOWFLAKE_ACCOUNT"),
+            "user": os.getenv("SNOWFLAKE_USER"),
+            "password": os.getenv("SNOWFLAKE_PASSWORD"),
+            "role": "ACCOUNTADMIN",
+            "database": os.getenv("SNOWFLAKE_DATABASE"),
+            "warehouse": os.getenv("SNOWFLAKE_WAREHOUSE"),
+            "schema": os.getenv("SNOWFLAKE_SCHEMA"),
+        }
+        self.session = None
+        self.conn = None
+        self.cursor = None
     
     def get_uid(self):
         # returns data from auth page
@@ -153,14 +167,18 @@ class SnowflakeManager:
     def insert_data(self,data,source,user_id):
         # inserts data into the database
         if source.casefold() == 'Github':
-            # insert into github table
-            pass
+            insert_query = f"""INSERT INTO {user_id}_github (content) VALUES {content}"""
+            self.cursor.execute(insert_query)
+            self.conn.commit()
         elif source.casefold() == 'Web':
-            # insert into web table
-            pass
+            insert_query = f"""INSERT INTO {user_id}_rag (content) VALUES {content}"""
+            self.cursor.execute(insert_query)
+            self.conn.commit()
         elif source.casefold() == 'PDF':
-            # insert into pdf table
-            pass
+            insert_query = f"""INSERT INTO {user_id}_pdf (content) VALUES {content}"""
+            self.cursor.execute(insert_query)
+            self.conn.commit()
+
     def search(self,user_id, query):
         root = Root(self.session)
         # Search in the common search service
@@ -217,12 +235,15 @@ class SnowflakeManager:
         pdf_response = json.dumps(pdf_search_results.to_dict())
         return [common_response,personal_response,github_response, pdf_response]
     
-    def generate(self, query):
+    def generate(self, query,user_id):
         response = self.search(query)
+        memory = Memory().retrieve_memory(user_id)
+        
         instruction = f"""
             SELECT SNOWFLAKE.CORTEX.COMPLETE(
                 'mistral-large2',
-                $$You are an intelligent assistant who can answer the user query based on the provided document content and can also provide the relevant information.
+                $$You are an intelligent assistant who can answer the user query based on the provided document content
+                  and can also provide the relevant information.
                 Document: {response}
                 Query: {query}$$
             );
