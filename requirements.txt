@@ -18,3 +18,4 @@ webdriver-manager
 mistralai
 toml
 nest-asyncio
+PyPDF2
