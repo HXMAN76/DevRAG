@@ -112,8 +112,7 @@ Finally, we focused on integrating all components to deliver a cohesive applicat
 - **PyPDF2:** Utilized for extracting text content from PDF files.  
 - **Langchain:** Used for text splitting and processing, ensuring efficient handling of large text data.  
 
-### Middleware Libraries  
-- **dotenv:** For loading environment variables from a `.env` file.  
+### Middleware Libraries    
 - **crawl4ai:** Used for asynchronous web crawling, enabling efficient and scalable web scraping.  
 
 ### Logging and Configuration  
