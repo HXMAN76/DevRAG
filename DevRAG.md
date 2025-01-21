@@ -102,6 +102,8 @@ Finally, we focused on integrating all components to deliver a cohesive applicat
 
 ## Tech Stack used 
 
+![Tech Stack](C:/Users/gcboo/OneDrive/Pictures/Screenshots/Screenshot 2025-01-21 235453.png)
+
 
 ## Challenges we ran into
 
