@@ -6,16 +6,13 @@ asyncio
 crawl4ai
 snowflake
 snowflake-connector-python
-pathlib
 firebase_admin
-python-dotenv
 bs4
 langchain
 typing
 beautifulsoup4
-selenium 
-webdriver-manager
 mistralai
 toml
 nest-asyncio
 PyPDF2
+snowflake-snowpark-python
