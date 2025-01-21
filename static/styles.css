@@ -182,6 +182,7 @@ h3 {
     width: 200px;
     text-align: center;
     position: relative;
+    color: black;
 }
 
 .card:hover{

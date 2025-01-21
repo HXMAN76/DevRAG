@@ -194,20 +194,19 @@ class FirebaseAuth:
         except Exception as e:
             return None
         
-class LoginApp:
-    def __init__(self, skip_page_config=False):
-        self.auth = FirebaseAuth()
-        self.initialize_session_state()
-        if not skip_page_config:
-            st.set_page_config(page_title="Login", layout="centered")
+class BasePage:
+    def __init__(self):
+        self.load_styles()
+
+    def load_styles(self):
         with open('static/login.css', 'r') as f:
             st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
-    def initialize_session_state(self):
-        if 'current_page' not in st.session_state:
-            st.session_state.current_page = 'login'
-        if 'user_id' not in st.session_state:
-            st.session_state.user_id = None
+
+class LoginPage(BasePage):
+    def __init__(self, auth):
+        super().__init__()
+        self.auth = auth
 
     def validate_input(self, email, password=None):
         errors = []
@@ -215,22 +214,22 @@ class LoginApp:
             errors.append("Email is required")
         elif not self.auth.validate_email(email):
             errors.append("Invalid email format")
-        
+
         if password is not None:
             if not password:
                 errors.append("Password is required")
             elif not self.auth.validate_password(password):
                 errors.append("Password must be at least 6 characters")
-        
+
         return errors
 
-    def show_login_page(self):
+    def show(self):
         st.subheader("Login", anchor=False)
         with st.form("login_form"):
             email = st.text_input("Email")
             password = st.text_input("Password", type="password")
             submit = st.form_submit_button("Login")
-            
+
             if submit:
                 errors = self.validate_input(email, password)
                 if errors:
@@ -256,24 +255,45 @@ class LoginApp:
                 st.session_state.current_page = 'signup'
                 st.rerun()
 
-    def show_signup_page(self):
+
+class SignupPage(BasePage):
+    def __init__(self, auth):
+        super().__init__()
+        self.auth = auth
+
+    def validate_input(self, email, password=None):
+        errors = []
+        if not email:
+            errors.append("Email is required")
+        elif not self.auth.validate_email(email):
+            errors.append("Invalid email format")
+
+        if password is not None:
+            if not password:
+                errors.append("Password is required")
+            elif not self.auth.validate_password(password):
+                errors.append("Password must be at least 6 characters")
+
+        return errors
+
+    def show(self):
         st.subheader("\U0001F31F Ready to supercharge your development?", anchor=False)
         st.markdown("Sign up now to get full access to DevRag and boost your coding productivity!")
         with st.form("signup_form"):
             name = st.text_input("Full Name")
             email = st.text_input("Email")
             password = st.text_input("Password", type="password")
-            occupation = st.selectbox("Occupation", 
-                ["Student", "Software Developer", "Data Scientist", "Researcher", 
-                 "Teacher/Professor", "Business Professional", "Other"])
+            occupation = st.selectbox("Occupation",
+                                      ["Student", "Software Developer", "Data Scientist", "Researcher",
+                                       "Teacher/Professor", "Business Professional", "Other"])
             description = st.text_area("Description")
             submit = st.form_submit_button("Sign Up")
-            
+
             if submit:
                 errors = self.validate_input(email, password)
                 if not name:
                     errors.append("Name is required")
-                
+
                 if errors:
                     for error in errors:
                         st.error(error)
@@ -297,12 +317,27 @@ class LoginApp:
             st.session_state.current_page = 'login'
             st.rerun()
 
-    def show_forgot_password_page(self):
+
+class ForgotPasswordPage(BasePage):
+    def __init__(self, auth):
+        super().__init__()
+        self.auth = auth
+
+    def validate_input(self, email):
+        errors = []
+        if not email:
+            errors.append("Email is required")
+        elif not self.auth.validate_email(email):
+            errors.append("Invalid email format")
+
+        return errors
+
+    def show(self):
         st.subheader("Reset Password", anchor=False)
         with st.form("forgot_password_form"):
             email = st.text_input("Email")
             submit = st.form_submit_button("Send Reset Link")
-            
+
             if submit:
                 errors = self.validate_input(email)
                 if errors:
@@ -322,48 +357,15 @@ class LoginApp:
             st.session_state.current_page = 'login'
             st.rerun()
 
-    def show_user_dashboard(self):
-        st.title("Welcome!")
-        user_info = self.auth.get_user_info(st.session_state.user_id)
-        if user_info:
-            st.write(f"Name: {user_info.get('name', 'N/A')}")
-            st.write(f"Email: {user_info.get('email', 'N/A')}")
-            st.write(f"Occupation: {user_info.get('occupation', 'N/A')}")
-        
-        if st.button("Logout"):
-            st.session_state.user_id = None
-            st.session_state.current_page = 'login'
-            st.rerun()
-
-    def run(self):
-        if st.session_state.user_id is None:
-            if st.session_state.current_page == 'login':
-                self.show_login_page()
-            elif st.session_state.current_page == 'signup':
-                self.show_signup_page()
-            elif st.session_state.current_page == 'forgot_password':
-                self.show_forgot_password_page()
-        else:
-            self.show_user_dashboard()
-
 class Landing:
     PAGE_TITLE = "DevRag"
     PAGE_ICON = "static/favicon-32.png"
     BG_IMAGE = "static/bg.jpg"
 
-    def __init__(self, skip_page_config=False):
-        if not skip_page_config:
-            self.setup_page_config()
+    def __init__(self):
         self.hide_dev_options()
         self.set_background(self.BG_IMAGE)
         self.load_custom_css()
-
-    def setup_page_config(self):
-        st.set_page_config(
-            page_title=self.PAGE_TITLE,
-            page_icon=self.PAGE_ICON,
-            layout="centered"
-        )
 
     def hide_dev_options(self):
         st.markdown(
@@ -504,19 +506,36 @@ class Landing:
 
 class App:
     def __init__(self):
-        # Set page config once at the app level
-        st.set_page_config(
-            page_title="DevRag",
-            page_icon="static/favicon-32.png",
-            layout="wide"
-        )
-        
+            
         # Initialize session state
         self.initialize_session_state()
-        
+        self.title = "DevRag"
+        self.layout = "wide"
+        self.handle_page_config()
+        # Set page config once at the app level
+        st.set_page_config(
+            page_title=self.title,
+            page_icon="static/favicon-32.png",
+            layout=self.layout
+        )
+        # Initialize Authorization 
+        self.auth = FirebaseAuth()
         # Initialize components without page config
-        self.landing = Landing(skip_page_config=True)
-        self.login = LoginApp(skip_page_config=True)
+        self.landing = Landing()
+        self.login = LoginPage(self.auth)
+        self.signup = SignupPage(self.auth)
+        self.forgot_password = ForgotPasswordPage(self.auth)
+
+    def handle_page_config(self):
+        if st.session_state.current_page == 'landing':
+            self.title = "DevRag"
+            self.layout = "wide"
+        elif st.session_state.current_page in ['login', 'signup', 'forgot_password']:
+            self.title = "DevRag - Authentication"
+            self.layout = "centered"
+        elif st.session_state.current_page == 'chatbot':
+            self.title = "DevRag - Chatbot"
+            self.layout = "wide"
 
     def initialize_session_state(self):
         """Initialize all required session state variables"""
@@ -534,10 +553,10 @@ class App:
             st.session_state.current_page = 'landing'
             st.rerun()
 
-        # Redirect to dashboard if user is authenticated but on auth pages
+        # Redirect to DevRAG - chatbot if user is authenticated but on auth pages
         if (st.session_state.user_id is not None and 
             st.session_state.current_page in ['login', 'signup', 'forgot_password']):
-            st.session_state.current_page = 'dashboard'
+            st.session_state.current_page = 'chatbot'
             st.rerun()
 
     def run(self):
@@ -549,11 +568,11 @@ class App:
         if st.session_state.current_page == 'landing':
             self.landing.run()
         elif st.session_state.current_page == 'login':
-            self.login.run()
+            self.login.show()
         elif st.session_state.current_page == 'signup':
-            self.signup.run()
+            self.signup.show()
         elif st.session_state.current_page == 'forgot_password':
-            self.forgot_password.run()
+            self.forgot_password.show()
         elif st.session_state.current_page == 'chatbot':
             self.chatbot.run()
 
