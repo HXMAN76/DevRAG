@@ -8,10 +8,14 @@
     color: black;
 }
 
-/* .st-key-chat_input{
+.st-key-chat_input{
     position: fixed;
-    bottom: 15px;
-} */
+    bottom: 0;
+    padding: 15px;
+    background-color: white;
+    z-index: 2;
+}
+
 
 .st-key-web button,.st-key-github button,.st-key-pdf button{
     width: 50px;
@@ -21,6 +25,10 @@
     transform: scale(1.1);
     border: 2px solid #FF6B35;
     transition: ease all 0.3s;
+}
+
+.st-key-github button:hover p{
+    color: black;
 }
 
 /* User message Styles */
@@ -38,13 +46,6 @@
 }
 
 /* Bot Message styles */
-.st-emotion-cache-4oy321{
-    background-color: hsl(199, 35%, 90%);
-    border-top-right-radius: 40px;
-    border-bottom-right-radius: 40px;
-    margin-right: 2rem;
-}
-
 .st-emotion-cache-4oy321 p{
     font-family: Montserrat;
     font-weight: 600;
