@@ -18,8 +18,8 @@ from concurrent.futures import ThreadPoolExecutor as ThreadpoolExecutor
 
 class FirebaseAuth:
     def __init__(self):
-        with open('secrets.toml', 'r') as file:
-            self.secret = toml.load(file)
+        # with open('secrets.toml', 'r') as file:
+        #     self.secret = toml.load(file)
         if not firebase_admin._apps:
             cred = credentials.Certificate({
                 "type": self.secret["FIREBASE"]["TYPE"],
