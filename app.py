@@ -19,34 +19,34 @@ from concurrent.futures import ThreadPoolExecutor as ThreadpoolExecutor
 class FirebaseAuth:
     def __init__(self):
         # with open('secrets.toml', 'r') as file:
-        #     self.secret = toml.load(file)
+        #     st.secret = toml.load(file)
         if not firebase_admin._apps:
             cred = credentials.Certificate({
-                "type": self.secret["FIREBASE"]["TYPE"],
-                "project_id": self.secret["FIREBASE"]["PROJECT_ID"],
-                "private_key_id": self.secret["FIREBASE"]["PRIVATE_KEY_ID"],
-                "private_key": self.secret["FIREBASE"]["PRIVATE_KEY"].replace('\\n', '\n'),
-                "client_email": self.secret["FIREBASE"]["CLIENT_EMAIL"],
-                "client_id": self.secret["FIREBASE"]["CLIENT_ID"],
-                "auth_uri": self.secret["FIREBASE"]["AUTH_URI"],
-                "token_uri": self.secret["FIREBASE"]["TOKEN_URI"],
-                "auth_provider_x509_cert_url": self.secret["FIREBASE"]["AUTH_PROVIDER_X509_CERT_URL"],
-                "client_x509_cert_url": self.secret["FIREBASE"]["CLIENT_X509_CERT_URL"],
-                "universe_domain": self.secret["FIREBASE"]["UNIVERSE_DOMAIN"]
+                "type": st.secret["FIREBASE"]["TYPE"],
+                "project_id": st.secret["FIREBASE"]["PROJECT_ID"],
+                "private_key_id": st.secret["FIREBASE"]["PRIVATE_KEY_ID"],
+                "private_key": st.secret["FIREBASE"]["PRIVATE_KEY"].replace('\\n', '\n'),
+                "client_email": st.secret["FIREBASE"]["CLIENT_EMAIL"],
+                "client_id": st.secret["FIREBASE"]["CLIENT_ID"],
+                "auth_uri": st.secret["FIREBASE"]["AUTH_URI"],
+                "token_uri": st.secret["FIREBASE"]["TOKEN_URI"],
+                "auth_provider_x509_cert_url": st.secret["FIREBASE"]["AUTH_PROVIDER_X509_CERT_URL"],
+                "client_x509_cert_url": st.secret["FIREBASE"]["CLIENT_X509_CERT_URL"],
+                "universe_domain": st.secret["FIREBASE"]["UNIVERSE_DOMAIN"]
             })
             firebase_admin.initialize_app(cred)
         self.db = firestore.client()
-        self.api_key = self.secret["FIREBASE"]["API_KEY"]
+        self.api_key = st.secret["FIREBASE"]["API_KEY"]
 
     def _get_snowflake_connection(self):
         """Create and return a Snowflake connection"""
         return snowflake.connector.connect(
-            user=self.secret["SNOWFLAKE"]["USER"],
-            password=self.secret["SNOWFLAKE"]["PASSWORD"],
-            account=self.secret['SNOWFLAKE']['ACCOUNT'],
-            database=self.secret["SNOWFLAKE"]["DATABASE"],
-            schema=self.secret["SNOWFLAKE"]["SCHEMA"],
-            warehouse=self.secret["SNOWFLAKE"]["WAREHOUSE"]
+            user=st.secret["SNOWFLAKE"]["USER"],
+            password=st.secret["SNOWFLAKE"]["PASSWORD"],
+            account=st.secret['SNOWFLAKE']['ACCOUNT'],
+            database=st.secret["SNOWFLAKE"]["DATABASE"],
+            schema=st.secret["SNOWFLAKE"]["SCHEMA"],
+            warehouse=st.secret["SNOWFLAKE"]["WAREHOUSE"]
         )
 
     def _setup_snowflake_resources(self, user_id):
@@ -69,7 +69,7 @@ class FirebaseAuth:
                 create_search_query = f"""
                     CREATE OR REPLACE CORTEX SEARCH SERVICE {user_id}_{service}search
                     ON content
-                    WAREHOUSE = '{self.secret["SNOWFLAKE"]["WAREHOUSE"]}'
+                    WAREHOUSE = '{st.secret["SNOWFLAKE"]["WAREHOUSE"]}'
                     TARGET_LAG = '1 minutes'
                     EMBEDDING_MODEL = 'snowflake-arctic-embed-l-v2.0'
                     AS (
