@@ -5,11 +5,9 @@
 
 Participating in this hackathon was an incredible opportunity to dive into the world of cutting-edge AI technologies. As our first hackathon experience, we were motivated to challenge ourselves and explore the potential of Retrieval-Augmented Generation (RAG) systems.The event provided us with a unique setlist for learning AI, allowing us to combine powerful tools like Cortex Search for retrieval, Mistral LLM (mistral-large2) on Snowflake Cortex for generation, and Streamlit Community Cloud for the front end.
 
-
 Our vision was to build an innovative RAG application that simplifies how users interact with diverse information sources, such as GitHub repositories, PDFs, and web pages. By integrating these technologies, we aimed to create a personalized, efficient, and user-friendly query system that makes information retrieval more accessible and actionable.
 
 This hackathon provided a platform to connect with the AI space and showcase our creativity in solving real-world challenges.Inspired by this collaborative environment, we discovered our capabilities, explored new tech stacks, and delivered a solution we’re truly proud of.
-
 
 
 ## What It Does  
@@ -30,7 +28,6 @@ With a simple paste of a website URL, users can unlock the power of web content 
 ### 🛠️ Unified Query System  with Streamlit Frontend
 Bringing all these features together, the application offers a seamless and unified query system.Users can interact with GitHub repositories, PDFs, and websites in one place, ensuring a consistent and intuitive experience.
 The Streamlit Community Cloud frontend provides a user-friendly interface for users to input queries and view results
-
 
 
 
@@ -100,10 +97,33 @@ Finally, we focused on integrating all components to deliver a cohesive applicat
 
 
 
-## Tech Stack used 
+## 🛠️ Tech Stack used 
 
-![Tech Stack] (https://imgur.com/a/oFVLNWh)
+### Frontend  
+- **Streamlit:** Used for building the interactive and user-friendly frontend interface. Streamlit allows for rapid development of web applications with minimal code.  
 
+### Backend  
+- **Python:** The primary programming language used for developing the backend logic and integrating various services.  
+- **Firebase:** Utilized for user authentication and Firestore database to store user data and manage conversations.  
+- **Snowflake:** Used for data storage and retrieval, leveraging Snowflake's Cortex Search Service for efficient data retrieval and embedding models.  
+- **Mistral AI:** Integrated for natural language generation, providing context-aware responses to user queries.  
+- **BeautifulSoup:** Used for parsing HTML content during web scraping.  
+- **Playwright:** Employed for automating web scraping tasks, especially for GitHub repository content.  
+- **PyPDF2:** Utilized for extracting text content from PDF files.  
+- **Langchain:** Used for text splitting and processing, ensuring efficient handling of large text data.  
+
+### Middleware Libraries  
+- **dotenv:** For loading environment variables from a `.env` file.  
+- **crawl4ai:** Used for asynchronous web crawling, enabling efficient and scalable web scraping.  
+
+### Logging and Configuration  
+- **Logging:** Configured to capture and log important events and errors during the application's execution.  
+- **ThreadPoolExecutor:** Used for concurrent execution of tasks, improving the performance of data insertion and retrieval operations.  
+
+### Deployment  
+- **Streamlit Community Cloud:** The application is deployed on Streamlit Community Cloud, providing a seamless and accessible platform for users to interact with the application.  
+
+This tech stack ensures a robust, scalable, and efficient Retrieval-Augmented Generation (RAG) system, providing users with accurate and context-aware information retrieval capabilities.  
 
 ## Challenges we ran into
 
@@ -113,13 +133,10 @@ Implementing a personalized experience, where user queries, URLs, and uploaded d
 ### 2. ⚡ Performance Optimization  
 Ensuring low-latency responses while integrating advanced models like Mistral LLM and Snowflake Arctic Embed was critical. We had to optimize query processing and retrieval pipelines to deliver accurate and fast responses, even with large datasets.  
 
-### 1. 🌐 Web Scraping Optimization  
+### 3. 🌐 Web Scraping Optimization  
 Initially, we explored multiple web crawlers to minimize the time required to scrape websites efficiently. However, many tools either lacked flexibility or were too resource-intensive for our use case. After extensive research and testing, we decided to use **BeautifulSoup** in combination with **Crawl4AI**. This setup provided the perfect balance of speed and accuracy for parsing website content while handling diverse webpage structures.  
 
-### 2. 🔄 Session Management in Streamlit  
-Managing sessions in **Streamlit** was another challenge. To address this, we introduced object-oriented programming (OOP) concepts, which allowed us to build a custom session management layer. This enabled seamless session maintenance, providing users with a consistent and personalized experience throughout their interactions.  
-
-### 3. ✨ Quality of Code Maintenance  
+### 4. ✨ Quality of Code Maintenance  
 As the project grew in complexity, maintaining clean and readable code became critical. We focused on adhering to best practices for modularization, code readability, and reusability.This commitment to quality not only made the codebase easier to manage but also improved debugging and future scalability.  
 
 
@@ -147,8 +164,8 @@ Our system features a **user-personalized architecture** that retains session-sp
 ### ✨ Tailored Responses  
 The chatbot delivers **tailored responses** by leveraging the contextual understanding of user queries and the provided data sources. Whether interacting with a GitHub repository, PDF, or website URL, the responses are precise, relevant, and personalized to the user’s specific needs.  
 
-## What we learned
 
+## What we learned
 
 ### 🌟 Exploring New Technologies  
 We gained hands-on experience with **Cortex Search**, **Mistral LLM**, **Snowflake Arctic Embed V2**, and **Streamlit Community Cloud**, understanding their capabilities and how to integrate them effectively.  
