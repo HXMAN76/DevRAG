@@ -254,8 +254,9 @@ class LoginPage(BasePage):
             if st.button("New User? Sign Up", key="new-user"):
                 st.session_state.current_page = 'signup'
                 st.rerun()
-
-
+    def get_user_id(self):
+        return st.session_state.user_id
+    
 class SignupPage(BasePage):
     def __init__(self, auth):
         super().__init__()
@@ -504,6 +505,96 @@ class Landing:
         self.create_team_section()
         self.create_footer_section()
 
+class ChatbotPage:
+    def _init_(self):
+        self.load_custom_css()
+        # if "messages" not in st.session_state:
+        #     st.session_state.messages = []
+        # if "show_sidebar" not in st.session_state:
+        #     st.session_state.show_sidebar = False
+        # if "sidebar_type" not in st.session_state:
+        #     st.session_state.sidebar_type = None
+
+    def load_custom_css(self):
+        with open('static/chatbot.css', 'r') as f:
+            st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+
+    def handle_sidebar_input(self, input_type):
+        with st.sidebar:
+            st.title(f"Process {input_type}")
+            if input_type == "PDF":
+                uploaded_file = st.file_uploader("Upload PDF", type="pdf")
+                if uploaded_file:
+                    st.success("PDF uploaded successfully!")
+                    return uploaded_file
+            elif input_type == "GitHub":
+                github_input = st.text_input(f"Enter {input_type} URL")
+                if github_input:
+                    st.success(f"{input_type} Repository processed successfully!")
+                    return github_input
+            elif input_type == "Website":
+                url_input = st.text_input(f"Enter {input_type} URL")
+                if url_input:
+                    st.success(f"{input_type} URL processed successfully!")
+                    return url_input
+        return None
+
+    def show(self):
+        self.load_custom_css()
+
+        st.title("User", anchor=False)
+
+        for message in st.session_state.messages:
+            avatar_url = "https://cdn-icons-png.flaticon.com/512/1144/1144760.png" if message["role"] == "user" else "https://cdn-icons-png.flaticon.com/512/4711/4711987.png"
+            with st.chat_message(message["role"], avatar=avatar_url):
+                st.write(message["content"])
+
+        with st.container(key="chat_input"):
+            with st.form("User query", border=False, clear_on_submit=True):
+                user_query, send_button = st.columns([0.9, 0.1])
+                prompt = user_query.text_input("Prompt", label_visibility="collapsed", placeholder="Ask your question...")
+                submit_button = send_button.form_submit_button(label="ᯓ➤")
+
+            col1, _ = st.columns([2, 3])
+            with col1:
+                web, github, pdf = st.columns(3)
+
+                if web.button("🌐", key="web"):
+                    st.session_state.show_sidebar = True
+                    st.session_state.sidebar_type = "Website"
+                    st.rerun()
+
+                if github.button("Git", key="github"):
+                    st.session_state.show_sidebar = True
+                    st.session_state.sidebar_type = "GitHub"
+                    st.rerun()
+
+                if pdf.button("🔗", key="pdf"):
+                    st.session_state.show_sidebar = True
+                    st.session_state.sidebar_type = "PDF"
+                    st.rerun()
+
+        if st.session_state.show_sidebar:
+            result = self.handle_sidebar_input(st.session_state.sidebar_type)
+
+        if prompt and submit_button:
+            st.session_state.messages.append({
+                "role": "user", 
+                "content": prompt,
+                "avatar": "https://cdn-icons-png.flaticon.com/512/1144/1144760.png"
+            })
+            with st.chat_message("user", avatar="https://cdn-icons-png.flaticon.com/512/1144/1144760.png"):
+                st.write(prompt)
+
+            response = f"Echo: {prompt}"
+            st.session_state.messages.append({
+                "role": "assistant", 
+                "content": response,
+                "avatar": "https://cdn-icons-png.flaticon.com/512/4711/4711987.png"
+            })
+            with st.chat_message("assistant", avatar="https://cdn-icons-png.flaticon.com/512/4711/4711987.png"):
+                st.write(response)
+
 class App:
     def __init__(self):
             
@@ -525,14 +616,17 @@ class App:
         self.login = LoginPage(self.auth)
         self.signup = SignupPage(self.auth)
         self.forgot_password = ForgotPasswordPage(self.auth)
+        self.chatbot = ChatbotPage()
 
     def handle_page_config(self):
         if st.session_state.current_page == 'landing':
             self.title = "DevRag"
             self.layout = "wide"
+
         elif st.session_state.current_page in ['login', 'signup', 'forgot_password']:
             self.title = "DevRag - Authentication"
             self.layout = "centered"
+
         elif st.session_state.current_page == 'chatbot':
             self.title = "DevRag - Chatbot"
             self.layout = "wide"
@@ -545,6 +639,12 @@ class App:
             st.session_state.user_id = None
         if 'authentication_status' not in st.session_state:
             st.session_state.authentication_status = None
+        if "messages" not in st.session_state:
+            st.session_state.messages = []
+        if "show_sidebar" not in st.session_state:
+            st.session_state.show_sidebar = False
+        if "sidebar_type" not in st.session_state:
+            st.session_state.sidebar_type = None
 
     def handle_navigation(self):
         """Handle navigation between pages based on session state"""
@@ -574,13 +674,15 @@ class App:
         elif st.session_state.current_page == 'forgot_password':
             self.forgot_password.show()
         elif st.session_state.current_page == 'chatbot':
-            self.chatbot.run()
+            self.chatbot.show()
 
         # Debug information (remove in production)
         # st.sidebar.write("Debug Info:")
         # st.sidebar.write(f"Current Page: {st.session_state.current_page}")
         # st.sidebar.write(f"User ID: {st.session_state.user_id}")
         # st.sidebar.write(f"Auth Status: {st.session_state.authentication_status}")
+
+
 
 if __name__ == '__main__':
     app = App()
