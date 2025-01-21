@@ -17,4 +17,4 @@ selenium
 webdriver-manager
 mistralai
 toml
-nested-asyncio
+nest-asyncio
