@@ -111,21 +111,31 @@ h3 {
     color: white;
 }
 
-.st-emotion-cache-1h3k0y3{
+.about-section{
+    display: flex;
+    justify-content: space-between;
+}
+
+.about-section .title{
+    font-size: 1.5rem;
+    font-weight: 600;
+}
+
+.col1,.col2,.col3{
+    width: 50%;
+    margin: 0 0.5rem;
     color: white;
     border-radius: 10px;
-    padding: 1rem;
+    padding: 0.8rem 1rem;
     background: rgba(125, 125, 125, 0.3);
     backdrop-filter: blur( 13px );
     box-shadow: 0 8px 32px 0 hsla(18, 94%, 20%, 0.3);
     max-width: 100%;
-}
-
-.st-emotion-cache-1h3k0y3 p{
     text-align: center;
 }
 
-.st-emotion-cache-1h3k0y3:hover{
+
+.col1:hover,.col2:hover,.col3:hover{
     transform: scale(1.05);
     transition: ease all 0.5s;
     cursor: pointer;

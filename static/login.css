@@ -1,5 +1,10 @@
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap');
 
+[data-testid="stMain"]{
+    background: url(https://raw.githubusercontent.com/HXMAN76/DevRAG/refs/heads/main/static/bg.jpg);
+    background-size: cover;
+}
+
 /* Custom button styles */
 .st-key-forgot-password button,
 .st-key-new-user button,
@@ -68,13 +73,11 @@
     margin-bottom: 2rem;
 }
 
-.stTextInput > div > div > input {
-    border-radius: 5px;
-    border: 1px solid #ccc;
+#login{
+    font-family: Montserrat;
+    color: #fff;
 }
 
-/* Loading spinner for background processes */
-.stSpinner {
-    text-align: center;
-    margin: 20px 0;
+.st-emotion-cache-1104ytp,.st-emotion-cache-ue6h4q{
+    color: #fff;
 }

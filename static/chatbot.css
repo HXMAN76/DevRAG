@@ -5,17 +5,34 @@
 
 #user::before{
     content: "Welcome ";
-    color: black;
+    color: white;
 }
 
 .st-key-chat_input{
     position: fixed;
     bottom: 0;
     padding: 15px;
-    background-color: white;
+    background: rgba( 0, 0, 0, 0.05 );
+    box-shadow: 0 8px 32px 0 hsla(18, 94%, 20%, 0.3);
+    backdrop-filter: blur( 13px );
     z-index: 2;
 }
 
+.e1obcldf8{
+    background-color: white;
+    width: 100px;
+    font-weight: 500;
+}
+
+.e1obcldf8:hover{
+    background-color: hsl(0, 0%, 80%);
+    transform: scale(1.1);
+    transition: ease all 0.3s;
+}
+
+.e1obcldf8 p{
+    color: black;
+}
 
 .st-key-web button,.st-key-github button,.st-key-pdf button{
     width: 50px;
@@ -28,7 +45,7 @@
 }
 
 .st-key-github button:hover p{
-    color: black;
+    color: skyblue;
 }
 
 /* User message Styles */
@@ -45,8 +62,29 @@
     font-weight: 500;
 }
 
+.st-emotion-cache-janbn0{
+    background-color: hsl(31, 100%, 90%);
+    border-top-left-radius: 40px;
+    border-bottom-left-radius: 40px;
+    margin-left: 2rem;
+}
+
+.st-emotion-cache-janbn0 p{
+    color: black;
+    font-family: Montserrat;
+    font-weight: 500;
+}
+
 /* Bot Message styles */
 .st-emotion-cache-4oy321 p{
     font-family: Montserrat;
     font-weight: 600;
+    color: black;
+}
+
+.st-emotion-cache-4oy321{
+    background-color: white;
+    border-top-right-radius: 40px;
+    border-bottom-right-radius: 40px;
+    margin-right: 2rem;
 }

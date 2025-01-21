@@ -1,6 +1,5 @@
 import streamlit as st
 import base64
-import streamlit as st
 import firebase_admin
 from firebase_admin import credentials, auth, firestore
 import os
@@ -12,6 +11,10 @@ import requests
 import time
 import json
 import toml
+import asyncio
+import nest_asyncio
+from backend import Backend
+from concurrent.futures import ThreadPoolExecutor as ThreadpoolExecutor
 
 class FirebaseAuth:
     def __init__(self):
@@ -35,7 +38,6 @@ class FirebaseAuth:
         self.db = firestore.client()
         self.api_key = self.secret["FIREBASE"]["API_KEY"]
 
-    # Methods for Snowflake connections, login, registration, password reset, etc., as defined earlier
     def _get_snowflake_connection(self):
         """Create and return a Snowflake connection"""
         return snowflake.connector.connect(
@@ -58,7 +60,6 @@ class FirebaseAuth:
             for table in tables:
                 create_table_query = f"""
                     CREATE TABLE IF NOT EXISTS {user_id}_{table} (
-                    id INT PRIMARY KEY,
                     content STRING
                     );"""
                 cursor.execute(create_table_query)
@@ -96,18 +97,18 @@ class FirebaseAuth:
         try:
             # Firebase Auth REST API endpoint for email/password sign-in
             auth_url = f"https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key={self.api_key}"
-            
+
             # Request payload
             payload = {
                 "email": email,
                 "password": password,
                 "returnSecureToken": True
             }
-            
+
             # Make the authentication request
             response = requests.post(auth_url, json=payload)
             data = response.json()
-            
+
             # Check for errors
             if response.status_code != 200:
                 error_message = data.get('error', {}).get('message', 'Authentication failed')
@@ -118,9 +119,9 @@ class FirebaseAuth:
             user_id = data.get('localId')
             if not user_id:
                 raise Exception("Failed to get user information")
-                
+
             return user_id
-            
+
         except requests.exceptions.RequestException as e:
             raise Exception("Network error. Please check your connection.")
         except Exception as e:
@@ -133,25 +134,25 @@ class FirebaseAuth:
                 email=email,
                 password=password
             )
-            
+
             # Store additional user information in Firestore
             if additional_data:
                 user_data = {
                     'email': email,
                     'created_at': datetime.now(),
                     **additional_data,
-                    "past_converations": [],
-                    "conversation_summary":[]
+                    "past_conversations": [],
+                    "conversation_summary": []
                 }
                 self.db.collection('user_data').document(user.uid).set(user_data)
-            
+
             # Start Snowflake setup in background thread
             threading.Thread(
                 target=self._setup_snowflake_resources,
                 args=(user.uid,),
                 daemon=True
             ).start()
-            
+
             return user.uid
         except Exception as e:
             if 'EMAIL_EXISTS' in str(e):
@@ -159,22 +160,21 @@ class FirebaseAuth:
             raise Exception("Registration failed. Please try again.")
 
     def reset_password(self, email):
-
         """Send password reset email using Firebase Authentication REST API"""
         try:
             # Firebase Auth REST API endpoint for password reset
             reset_password_url = f"https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key={self.api_key}"
-            
+
             # Request payload
             payload = {
                 "requestType": "PASSWORD_RESET",
                 "email": email
             }
-            
+
             # Send the request to Firebase
             response = requests.post(reset_password_url, json=payload)
             data = response.json()
-            
+
             # Check if the request was successful
             if response.status_code == 200:
                 print(f"Password reset email sent to {email}")
@@ -193,7 +193,7 @@ class FirebaseAuth:
             return user_data.to_dict()
         except Exception as e:
             return None
-        
+
 class BasePage:
     def __init__(self):
         self.load_styles()
@@ -202,11 +202,11 @@ class BasePage:
         with open('static/login.css', 'r') as f:
             st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
-
 class LoginPage(BasePage):
     def __init__(self, auth):
         super().__init__()
         self.auth = auth
+        self.user_id = None
 
     def validate_input(self, email, password=None):
         errors = []
@@ -237,8 +237,8 @@ class LoginPage(BasePage):
                         st.error(error)
                 else:
                     try:
-                        user_id = self.auth.login_user(email, password)
-                        st.session_state.user_id = user_id
+                        self.user_id = self.auth.login_user(email, password)
+                        st.session_state.user_id = self.user_id
                         st.success("Login successful!")
                         time.sleep(2)
                         st.rerun()
@@ -254,9 +254,7 @@ class LoginPage(BasePage):
             if st.button("New User? Sign Up", key="new-user"):
                 st.session_state.current_page = 'signup'
                 st.rerun()
-    def get_user_id(self):
-        return st.session_state.user_id
-    
+
 class SignupPage(BasePage):
     def __init__(self, auth):
         super().__init__()
@@ -318,7 +316,6 @@ class SignupPage(BasePage):
             st.session_state.current_page = 'login'
             st.rerun()
 
-
 class ForgotPasswordPage(BasePage):
     def __init__(self, auth):
         super().__init__()
@@ -359,13 +356,8 @@ class ForgotPasswordPage(BasePage):
             st.rerun()
 
 class Landing:
-    PAGE_TITLE = "DevRag"
-    PAGE_ICON = "static/favicon-32.png"
-    BG_IMAGE = "static/bg.jpg"
-
     def __init__(self):
         self.hide_dev_options()
-        self.set_background(self.BG_IMAGE)
         self.load_custom_css()
 
     def hide_dev_options(self):
@@ -380,27 +372,19 @@ class Landing:
             unsafe_allow_html=True
         )
 
-    def set_background(self, image_path):
-        image_ext = "bg.jpg"
-        st.markdown(
-            f"""
-            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-            <style>
-            [data-testid="stMain"]{{
-                background: url(data:image/{image_ext};base64,{base64.b64encode(open(image_path, "rb").read()).decode()});
-                background-size: cover;
-            }}
-            </style>
-            """,
-            unsafe_allow_html=True
-        )
-
     def load_custom_css(self):
         with open('static/styles.css', 'r') as f:
             st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
     def create_navbar(self):
         st.markdown("""
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+        <style>
+        [data-testid="stMain"]{
+            background: url(https://raw.githubusercontent.com/HXMAN76/DevRAG/refs/heads/main/static/bg.jpg);
+            background-size: cover;
+        }
+        </style>
         <div class="navbar">
             <a href="#home">Home</a>
             <a href="#features">Features</a>
@@ -447,53 +431,94 @@ class Landing:
         """, unsafe_allow_html=True)
 
     def create_about_section(self):
-        col1, col2, col3 = st.columns(3)
+        st.markdown("""
+        <div class="about-section">
+            <div class="col1">
+                <span class="title">📚 Vast Knowledge Base</span>
+                <p>Access information from various programming languages, frameworks, and libraries.</p>
+            </div>
+            <div class="col2">
+                <span class="title">🔍 Smart Code Search</span>
+                <p>Find relevant code snippets and examples quickly and efficiently.</p>
+            </div>
+            <div class="col3">
+                <span class="title">💡 Intelligent Suggestions</span>
+                <p>Get context-aware recommendations and best practices for your code.</p>
+            </div>
+        </div>
+    """, unsafe_allow_html=True)
+        # col1, col2, col3 = st.columns(3)
 
-        with col1:
-            st.subheader("📚 Vast Knowledge Base", anchor=False)
-            st.write("Access information from various programming languages, frameworks, and libraries.")
+        # with col1:
+        #     st.subheader("📚 Vast Knowledge Base", anchor=False)
+        #     st.write("Access information from various programming languages, frameworks, and libraries.")
 
-        with col2:
-            st.subheader("🔍 Smart Code Search", anchor=False)
-            st.write("Find relevant code snippets and examples quickly and efficiently.")
+        # with col2:
+        #     st.subheader("🔍 Smart Code Search", anchor=False)
+        #     st.write("Find relevant code snippets and examples quickly and efficiently.")
 
-        with col3:
-            st.subheader("💡 Intelligent Suggestions", anchor=False)
-            st.write("Get context-aware recommendations and best practices for your code.")
+        # with col3:
+        #     st.subheader("💡 Intelligent Suggestions", anchor=False)
+        #     st.write("Get context-aware recommendations and best practices for your code.")
 
-        st.markdown("<br><hr id='hr-1'>", unsafe_allow_html=True)
+        st.html("<br><hr id='hr-1'>")
 
     def create_team_section(self):
         st.markdown("<div id='contact-us'></div>", unsafe_allow_html=True)
         st.header("Team", anchor=False)
 
-        profiles = [
-            {"name": "Raghav", "role": "Frontend Developer", "image": "Raghav_profile.jpg", "linkedin": "https://www.linkedin.com/in/raghav--n/", "github": "https://github.com/Rag-795", "email": "balaji.saragesh@gmail.com"},
-            {"name": "Dev Bala Saragesh", "role": "Backend Developer", "image": "saragesh.jpg", "linkedin": "https://www.linkedin.com/in/devbalasarageshbs/", "github": "https://github.com/dbsaragesh-bs", "email": "balaji.saragesh@gmail.com"},
-            {"name": "Hari Heman", "role": "Backend Developer", "image": "Hari_Profile_Pic.jpg", "linkedin": "https://www.linkedin.com/in/hari-heman/", "github": "https://github.com/HXMAN76", "email": "hariheman76@gmail.com"},
-            {"name": "SriRanjana", "role": "Backend Developer", "image": "Ranjana_Profile_Pic.jpg", "linkedin": "https://www.linkedin.com/in/sriranjana-chitraboopathy-50b88828a/", "github": "https://github.com/sriranjanac", "email": "sriranjanac@gmail.com"}
-        ]
+        rag, dev, hari, ranjana = st.columns(4)
 
-        for profile in profiles:
-            self._create_profile_card(**profile)
-
-    def _create_profile_card(self, name, role, image, linkedin, github, email):
-        st.markdown(
-            f"""<div class="card">
-            <img class="profile-pic" src="https://raw.githubusercontent.com/HXMAN76/DevRAG/refs/heads/main/static/{image}" alt="placeholder">
-            <p class="name">{name}</p>
-            <p class="role">{role}</p>
+        rag.markdown(
+            """<div class="card">
+            <img class="profile-pic" src="https://raw.githubusercontent.com/HXMAN76/DevRAG/refs/heads/main/static/Raghav_profile.jpg" alt="placeholder">
+            <p class="name">Raghav</p>
+            <p class="role">Frontend Developer</p>
             <div class="social-media-handles">
-                <a href="{linkedin}"><i class="fa-brands fa-linkedin"></i></a>
-                <a href="{github}"><i class="fa-brands fa-github"></i></a>
-                <a href="mailto:{email}"><i class="fa-regular fa-envelope"></i></a>
+                <a href="https://www.linkedin.com/in/raghav--n/"><i class="fa-brands fa-linkedin"></i></a>
+                <a href="https://github.com/Rag-795"><i class="fa-brands fa-github"></i></a>
+                <a href="mailto:raghavnagarjan23@gmail.com"><i class="fa-regular fa-envelope"></i></a>
             </div>
-            </div>""",
-            unsafe_allow_html=True
-        )
+        </div>""" , unsafe_allow_html=True)
+
+        dev.markdown(
+            """<div class="card">
+            <img class="profile-pic" src="https://raw.githubusercontent.com/HXMAN76/DevRAG/refs/heads/main/static/saragesh.jpg" alt="placeholder" style="width:150px">
+            <p class="name">Dev Bala Saragesh</p>
+            <p class="role">Backend Developer</p>
+            <div class="social-media-handles">
+                <a href="https://www.linkedin.com/in/devbalasarageshbs/"><i class="fa-brands fa-linkedin"></i></a>
+                <a href="https://github.com/dbsaragesh-bs"><i class="fa-brands fa-github"></i></a>
+                <a href="mailto:balaji.saragesh@gmail.com"><i class="fa-regular fa-envelope"></i></a>
+            </div>
+        </div>""" , unsafe_allow_html=True)
+
+        hari.markdown(
+            """<div class="card">
+            <img class="profile-pic" src="https://raw.githubusercontent.com/HXMAN76/DevRAG/refs/heads/main/static/Hari_Profile_Pic.jpg" alt="placeholder">
+            <p class="name">Hari Heman</p>
+            <p class="role">Backend Developer</p>
+            <div class="social-media-handles">
+                <a href="https://www.linkedin.com/in/hari-heman/"><i class="fa-brands fa-linkedin"></i></a>
+                <a href="https://github.com/HXMAN76"><i class="fa-brands fa-github"></i></a>
+                <a href="mailto:hariheman76@gmail.com"><i class="fa-regular fa-envelope"></i></a>
+            </div>
+        </div>""" , unsafe_allow_html=True)
+
+        ranjana.markdown(
+            """<div class="card">
+            <img class="profile-pic" src="https://raw.githubusercontent.com/HXMAN76/DevRAG/refs/heads/main/static/Ranjana_Profile_Pic.jpg" alt="placeholder">
+            <p class="name">SriRanjana</p>
+            <p class="role">Backend Developer</p>
+            <div class="social-media-handles">
+                <a href="https://www.linkedin.com/in/sriranjana-chitraboopathy-50b88828a/"><i class="fa-brands fa-linkedin"></i></a>
+                <a href="https://github.com/sriranjanac"><i class="fa-brands fa-github"></i></a>
+                <a href="mailto:sriranjanac@gmail.com"><i class="fa-regular fa-envelope"></i></a>
+            </div>
+        </div>""" , unsafe_allow_html=True)
 
     def create_footer_section(self):
-        st.markdown("<br><hr id='hr-2'>", unsafe_allow_html=True)
+        st.html("<br><hr id='hr-2'>")
         st.markdown("<span id='footer'>© 2025 DevRag. All rights reserved.</span>", unsafe_allow_html=True)
 
     def run(self):
@@ -505,19 +530,47 @@ class Landing:
         self.create_team_section()
         self.create_footer_section()
 
-class ChatbotPage:
-    def _init_(self):
+class Chatbot:
+    def __init__(self):
         self.load_custom_css()
-        # if "messages" not in st.session_state:
-        #     st.session_state.messages = []
-        # if "show_sidebar" not in st.session_state:
-        #     st.session_state.show_sidebar = False
-        # if "sidebar_type" not in st.session_state:
-        #     st.session_state.sidebar_type = None
+        self.initialize_session_state()
+        self.backend = Backend(st.session_state.user_id)
+        nest_asyncio.apply()
+
+    async def process_github_async(self, url: str):
+        """Async function to process GitHub URL"""
+        try:
+            await self.backend.github_scraper(url)
+            return True, None
+        except Exception as e:
+            return False, str(e)
+
+    def run_async_in_thread(self, url: str):
+        """Run async code in a separate thread"""
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            success, error = loop.run_until_complete(self.process_github_async(url))
+            return success, error
+        finally:
+            loop.close()
+
+    def connect_to_snowflake(self):
+        self.backend.snowflake_manager.connect() 
 
     def load_custom_css(self):
+        # Load custom CSS styles
         with open('static/chatbot.css', 'r') as f:
             st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+
+    def initialize_session_state(self):
+        # Initialize session states
+        if "messages" not in st.session_state:
+            st.session_state.messages = []
+        if "show_sidebar" not in st.session_state:
+            st.session_state.show_sidebar = False
+        if "sidebar_type" not in st.session_state:
+            st.session_state.sidebar_type = None
 
     def handle_sidebar_input(self, input_type):
         with st.sidebar:
@@ -525,31 +578,39 @@ class ChatbotPage:
             if input_type == "PDF":
                 uploaded_file = st.file_uploader("Upload PDF", type="pdf")
                 if uploaded_file:
+                    self.backend.pdf_scraper(uploaded_file)
                     st.success("PDF uploaded successfully!")
-                    return uploaded_file
             elif input_type == "GitHub":
                 github_input = st.text_input(f"Enter {input_type} URL")
                 if github_input:
-                    st.success(f"{input_type} Repository processed successfully!")
-                    return github_input
+                    try:
+                        with ThreadpoolExecutor() as executor:
+                            future = executor.submit(self.run_async_in_thread, github_input)
+                            success, error = future.result()
+                        if success:
+                            st.success(f"{input_type} Repository processed successfully!")
+                        else:
+                            st.error(f"Error processing {input_type} Repository: {error}")
+                    except Exception as e:
+                        st.error(f"Error processing {input_type} Repository: {str(e)}")
+                    
             elif input_type == "Website":
                 url_input = st.text_input(f"Enter {input_type} URL")
                 if url_input:
                     st.success(f"{input_type} URL processed successfully!")
-                    return url_input
+                    self.backend.web_crawler(url_input)
         return None
 
-    def show(self):
-        self.load_custom_css()
-
-        st.title("User", anchor=False)
-
+    def display_chat_history(self):
+        # Display chat history with avatars
         for message in st.session_state.messages:
             avatar_url = "https://cdn-icons-png.flaticon.com/512/1144/1144760.png" if message["role"] == "user" else "https://cdn-icons-png.flaticon.com/512/4711/4711987.png"
             with st.chat_message(message["role"], avatar=avatar_url):
                 st.write(message["content"])
 
+    def handle_chat_input(self):
         with st.container(key="chat_input"):
+            # Chat input
             with st.form("User query", border=False, clear_on_submit=True):
                 user_query, send_button = st.columns([0.9, 0.1])
                 prompt = user_query.text_input("Prompt", label_visibility="collapsed", placeholder="Ask your question...")
@@ -559,45 +620,62 @@ class ChatbotPage:
             with col1:
                 web, github, pdf = st.columns(3)
 
+                # Website button
                 if web.button("🌐", key="web"):
                     st.session_state.show_sidebar = True
                     st.session_state.sidebar_type = "Website"
                     st.rerun()
 
+                # GitHub button
                 if github.button("Git", key="github"):
                     st.session_state.show_sidebar = True
                     st.session_state.sidebar_type = "GitHub"
                     st.rerun()
 
+                # PDF button
                 if pdf.button("🔗", key="pdf"):
                     st.session_state.show_sidebar = True
                     st.session_state.sidebar_type = "PDF"
                     st.rerun()
 
+        # Handle sidebar display
         if st.session_state.show_sidebar:
             result = self.handle_sidebar_input(st.session_state.sidebar_type)
+            # We'll handle the result processing later
 
         if prompt and submit_button:
+            # Add user message to chat history with avatar
             st.session_state.messages.append({
-                "role": "user", 
+                "role": "user",
                 "content": prompt,
                 "avatar": "https://cdn-icons-png.flaticon.com/512/1144/1144760.png"
             })
             with st.chat_message("user", avatar="https://cdn-icons-png.flaticon.com/512/1144/1144760.png"):
                 st.write(prompt)
 
-            response = f"Echo: {prompt}"
+            # Add assistant message to chat history with avatar
+            response = self.backend.query(prompt)
             st.session_state.messages.append({
-                "role": "assistant", 
+                "role": "assistant",
                 "content": response,
                 "avatar": "https://cdn-icons-png.flaticon.com/512/4711/4711987.png"
             })
             with st.chat_message("assistant", avatar="https://cdn-icons-png.flaticon.com/512/4711/4711987.png"):
                 st.write(response)
 
+    def run(self):
+        if st.session_state.snowflake_manager is None:
+            from backend import SnowflakeManager
+            print("Initializing SnowflakeManager...")
+            st.session_state.snowflake_manager = SnowflakeManager(user_id=st.session_state.user_id)
+            st.session_state.snowflake_manager.connect()
+
+        st.title("User", anchor=False)
+        self.display_chat_history()
+        self.handle_chat_input()
+
 class App:
     def __init__(self):
-            
         # Initialize session state
         self.initialize_session_state()
         self.title = "DevRag"
@@ -609,6 +687,7 @@ class App:
             page_icon="static/favicon-32.png",
             layout=self.layout
         )
+
         # Initialize Authorization 
         self.auth = FirebaseAuth()
         # Initialize components without page config
@@ -616,20 +695,19 @@ class App:
         self.login = LoginPage(self.auth)
         self.signup = SignupPage(self.auth)
         self.forgot_password = ForgotPasswordPage(self.auth)
-        self.chatbot = ChatbotPage()
+        self.chatbot = Chatbot()
+        self.snowflake_manager = None
 
     def handle_page_config(self):
         if st.session_state.current_page == 'landing':
             self.title = "DevRag"
             self.layout = "wide"
-
         elif st.session_state.current_page in ['login', 'signup', 'forgot_password']:
             self.title = "DevRag - Authentication"
             self.layout = "centered"
-
         elif st.session_state.current_page == 'chatbot':
             self.title = "DevRag - Chatbot"
-            self.layout = "wide"
+            self.layout = "centered"
 
     def initialize_session_state(self):
         """Initialize all required session state variables"""
@@ -639,12 +717,8 @@ class App:
             st.session_state.user_id = None
         if 'authentication_status' not in st.session_state:
             st.session_state.authentication_status = None
-        if "messages" not in st.session_state:
-            st.session_state.messages = []
-        if "show_sidebar" not in st.session_state:
-            st.session_state.show_sidebar = False
-        if "sidebar_type" not in st.session_state:
-            st.session_state.sidebar_type = None
+        if 'snowflake_manager' not in st.session_state:
+            st.session_state.snowflake_manager = None
 
     def handle_navigation(self):
         """Handle navigation between pages based on session state"""
@@ -654,8 +728,9 @@ class App:
             st.rerun()
 
         # Redirect to DevRAG - chatbot if user is authenticated but on auth pages
-        if (st.session_state.user_id is not None and 
+        if (st.session_state.user_id is not None and
             st.session_state.current_page in ['login', 'signup', 'forgot_password']):
+
             st.session_state.current_page = 'chatbot'
             st.rerun()
 
@@ -674,15 +749,13 @@ class App:
         elif st.session_state.current_page == 'forgot_password':
             self.forgot_password.show()
         elif st.session_state.current_page == 'chatbot':
-            self.chatbot.show()
+            self.chatbot.run()
 
         # Debug information (remove in production)
         # st.sidebar.write("Debug Info:")
         # st.sidebar.write(f"Current Page: {st.session_state.current_page}")
         # st.sidebar.write(f"User ID: {st.session_state.user_id}")
         # st.sidebar.write(f"Auth Status: {st.session_state.authentication_status}")
-
-
 
 if __name__ == '__main__':
     app = App()
